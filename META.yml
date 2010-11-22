@@ -1,11 +1,18 @@
 ---
-name: SeeAlso-Source-BeaconAggregator
-version: 0.1
 abstract: 'Beacon files as source for SeeAlso::Server'
-author: 
+author:
   - 'Thomas Berger <ThB@gymel.com>'
+configure_requires:
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3613'
 license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: SeeAlso-Source-BeaconAggregator
 provides:
+  SeeAlso::Identifier::GND:
+    file: lib/SeeAlso/Source/BeaconAggregator.pm
   SeeAlso::Source::BeaconAggregator:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
     version: 0.1
@@ -15,6 +22,11 @@ provides:
   SeeAlso::Source::BeaconAggregator::Publisher:
     file: lib/SeeAlso/Source/BeaconAggregator/Publisher.pm
     version: 0.1
+recommends:
+  Getopt::Long: 0
+  LWP: 5.827
+  Pod::Usage: 0
+  SeeAlso::Server: 0.58
 requires:
   CGI: 3.0
   Carp: 0
@@ -26,16 +38,6 @@ requires:
   SeeAlso::Identifier::GND: 0.54
   SeeAlso::Server: 0.57
   perl: v5.8.2
-recommends:
-  Getopt::Long: 0
-  LWP: 5.827
-  Pod::Usage: 0
-  SeeAlso::Server: 0.58
-configure_requires:
-  Module::Build: 0.36
 resources:
   license: http://dev.perl.org/licenses/
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
-generated_by: 'Module::Build version 0.3613'
+version: 0.1

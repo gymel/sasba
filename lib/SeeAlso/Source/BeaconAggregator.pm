@@ -656,10 +656,7 @@ Send mail to the author
 
 =head1 AUTHOR
 
-    Thomas Berger
-    CPAN ID: THB
-    gymel.com
-    THB@cpan.org
+Thomas Berger <ThB@gymel.com>
 
 =head1 COPYRIGHT
 
