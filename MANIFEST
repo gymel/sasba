@@ -11,5 +11,7 @@ MANIFEST
 META.yml
 README
 t/001_load.t
+t/010_beacon.t
+t/099_unload.t
 t/beacon1.txt
 Todo

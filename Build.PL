@@ -16,9 +16,10 @@ my $build = Module::Build->new
 SeeAlso::Identifier::GND => '0.54',
                   },
       recommends => {
-                 LWP => '5.827',
-        Getopt::Long => 0,
-          Pod::Usage => 0,
+                  LWP => '5.827',
+         Getopt::Long => 0,
+           Pod::Usage => 0,
+      SeeAlso::Server => '0.58',
                   },
       license         => 'perl',
    create_makefile_pl => 'traditional',

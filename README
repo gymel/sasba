@@ -1,15 +1,32 @@
-pod2text SeeAlso::Source::BeaconAggregator.pm > README
+NAME
+    SeeAlso::Source::BeaconAggregator - Beacon files as source for
+    SeeAlso::Server
 
-If this is still here it means the programmer was too lazy to create the readme file.
+DESCRIPTION
+    This Module allows a collection of BEACON files (cf.
+    http://de.wikipedia.org/wiki/Wikipedia:PND/BEACON) to be used as
+    SeeAlso::Source (probably in the context of an SeeAlso::Server
+    application). Therefore it implements the four methods documented in
+    SeeAlso::Source
 
-You can create it now by using the command shown above from this directory.
+    The BEACON files (lists of non-local identifiers of a certain type
+    documenting the coverage of a given online database plus means for
+    access) are imported by the methods provided by
+    SeeAlso::Source::BeaconAggregator::Maintenance.pm, usually by employing
+    the script sasbactrl.pl as command line client.
 
-At the very least you should be able to use this set of instructions
-to install the module...
+    Serving other formats than SeeAlso or providing a BEACON file with
+    respect to this SeeAlso service is achieved by using
+    SeeAlso::Source::BeaconAggregator::Publisher.
 
-perl Build.PL
-./Build
-./Build test
-./Build install
 
-If you are on a windows box you should use 'nmake' rather than 'make'.
+AUTHOR
+        Thomas Berger <ThB@gymel.com>
+
+COPYRIGHT
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+    The full text of the license can be found in the LICENSE file included
+    with this module.
+
