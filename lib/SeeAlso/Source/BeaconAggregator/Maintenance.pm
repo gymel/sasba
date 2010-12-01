@@ -831,23 +831,12 @@ XxX
           print "INFO: Byte coded BOM detected: trying to restitute character semantics\n"; # if $options{'verbose'};
           print "INFO: Length is ", length($$contref), " ", (utf8::is_utf8($$contref) ? "characters" : "bytes"), "\n";
           binmode($tmpfh, ":bytes");
-          if ( utf8::downgrade($$contref, 1) ) {   # 1 = FAIL_OK
-              my $prevlength = length($$contref);
-              print "INFO: Downgrade was possible, length now $prevlength ", (utf8::is_utf8($$contref) ? "characters" : "bytes"), "\n";
-              while ( utf8::decode($$contref) ) {
-                  binmode($tmpfh, ":utf8");
-                  my $newlength = length($$contref);
-                  print "DEBUG: Reassembling as UTF-8 succeeded, length now $newlength ", (utf8::is_utf8($$contref) ? "characters" : "bytes"), "\n";
-                  last if $newlength == $prevlength;
-                  $prevlength = $newlength;
-                };
-            }
-          else {
-              print "WARNING: no downgrade possible, proceed with byte semantics"};
+          utf_deduplicate($contref) && binmode($tmpfh, ":utf8");
         }
       elsif ( utf8::is_utf8($$contref) ) {       # already Upgraded strings should be written as utf-8
           print "INFO: UTF8-ness already established\n" if $options{'verbose'};
           binmode($tmpfh, ":utf8");
+          utf_deduplicate($contref);             # but don't trust it (older LWP with file URLs, ...)            
         }
       elsif ( utf8::decode($$contref) ) {        # everything in character semantics now
           print "INFO: Could decode bytes to UTF8-characters\n" if $options{'verbose'};
@@ -894,6 +883,28 @@ XxX
       $usth->execute(time(), $response->status_line, $nuri) or croak("Could not execute $usql: ".$usth->errstr);
       return undef;
     };
+}
+
+
+
+sub utf_deduplicate {
+  my ($success, $stringref) = (0, @_);
+  if ( utf8::downgrade($$stringref, 1) ) {   # 1 = FAIL_OK
+      my $prevlength = length($$stringref);
+      print "INFO: Downgrade was possible, length now $prevlength ", (utf8::is_utf8($$stringref) ? "characters" : "bytes"), "\n";
+      while ( utf8::decode($$stringref) ) {
+          $success ++;
+          my $newlength = length($$stringref);
+          print "DEBUG: Reassembling as UTF-8 succeeded, length now $newlength ", (utf8::is_utf8($$stringref) ? "characters" : "bytes"), "\n";
+          last if $newlength == $prevlength;
+          $prevlength = $newlength;
+#         last unless utf8::downgrade($$stringref, 1);
+        }
+    }
+  else {
+      print "WARNING: no downgrade possible, proceed with byte semantics";
+    };
+  return $success;
 }
 
 =head3 listCollections ( [ $seqno_or_alias ] )

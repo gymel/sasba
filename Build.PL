@@ -11,6 +11,7 @@ my $build = Module::Build->new
            HTTP::Date => '5.0',
         HTTP::Request => '5.0',
                   DBI => '1.6',
+          DBD::SQLite => '1.25',
       SeeAlso::Server => '0.57',
   SeeAlso::Identifier => '0.46',
 SeeAlso::Identifier::GND => '0.54',
