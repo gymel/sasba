@@ -15,13 +15,13 @@ provides:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
   SeeAlso::Source::BeaconAggregator:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
-    version: 0.1
+    version: 0.2
   SeeAlso::Source::BeaconAggregator::Maintenance:
     file: lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm
-    version: 0.1
+    version: 0.2
   SeeAlso::Source::BeaconAggregator::Publisher:
     file: lib/SeeAlso/Source/BeaconAggregator/Publisher.pm
-    version: 0.1
+    version: 0.2
 recommends:
   Getopt::Long: 0
   LWP: 5.827
@@ -30,6 +30,7 @@ recommends:
 requires:
   CGI: 3.0
   Carp: 0
+  DBD::SQLite: 1.25
   DBI: 1.6
   File::Temp: 0
   HTTP::Date: 5.0
@@ -40,4 +41,4 @@ requires:
   perl: v5.8.2
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.1
+version: 0.2

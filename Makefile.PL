@@ -12,6 +12,7 @@ WriteMakefile
           'VERSION_FROM' => 'lib/SeeAlso/Source/BeaconAggregator.pm',
           'PREREQ_PM' => {
                            'SeeAlso::Identifier::GND' => '0.54',
+                           'DBD::SQLite' => '1.25',
                            'CGI' => '3.0',
                            'SeeAlso::Identifier' => '0.46',
                            'HTTP::Date' => '5.0',
