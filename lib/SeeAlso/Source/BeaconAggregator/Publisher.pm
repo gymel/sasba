@@ -385,7 +385,7 @@ XxX
 #                       #NAME         #INSTITUTION  _alias
       my $label;
       if ( $label = $onerow[7] ) { #MESSAGE 
-          $label = sprintf($label, $onerow[1] || "?")}
+          $label = sprintf($label, $onerow[1] || "...")}
       elsif ( $label = $onerow[8] || $onerow[9] || $onerow[10] || "???" ) {
           $label .= " (".$onerow[0].")" if $onerow[0]}
 

@@ -1,5 +1,4 @@
-#!/usr/bin/perl -w -CA
-#This script assumes ARGV encoded as UTF-8!
+#!/usr/bin/perl -w
 use lib "./lib";
 use strict;
 use utf8;
