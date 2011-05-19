@@ -5,11 +5,9 @@ use utf8;
 use warnings;
 use POSIX qw(strftime);
 use HTTP::Date;
+use SeeAlso::Identifier;
 use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
-use SeeAlso::Identifier::GND;
-use SeeAlso::Identifier::ISBN;
-use SeeAlso::Identifier::ISSN;
 use Pod::Usage;
 
 my $verbose = 1;
@@ -100,7 +98,7 @@ Actions and Arguments:
 
 =item B<--itype>
 
-Identifier type (currently supported: ISBN, ISSN, GND)
+Identifier type (corresponding subclass of SeeAlso::Identifier must be installed)
 
 =item --ignore-header-errors
 
@@ -158,9 +156,20 @@ if ( $dsn ) {
   }      
 
 $itype ||= "";
-my $iclass = ($itype =~ /ISBN/i) ? SeeAlso::Identifier::ISBN->new()
-           : ($itype =~ /ISSN/i) ? SeeAlso::Identifier::ISSN->new()
-                                 : SeeAlso::Identifier::GND->new();
+my $iclass;
+if ( $itype ) {
+    my $package = "SeeAlso::Identifier::".$itype;
+    eval {
+        (my $pkgpath = $package) =~ s=::=/=g;  # require needs path...
+        require "$pkgpath.pm";
+        import $package;
+      };
+    if ( $@ ) {
+        die "sorry: Identifier Class $package cannot be imported\n$@"};
+    $iclass = $package->new();
+  }
+else {
+    $iclass = SeeAlso::Identifier->new()};
 
 my $db = SeeAlso::Source::BeaconAggregator::Maintenance->new(
         'dbroot' => $dbroot,

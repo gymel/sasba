@@ -11,8 +11,6 @@ meta-spec:
   version: 1.4
 name: SeeAlso-Source-BeaconAggregator
 provides:
-  SeeAlso::Identifier::GND:
-    file: lib/SeeAlso/Source/BeaconAggregator.pm
   SeeAlso::Source::BeaconAggregator:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
     version: 0.2

@@ -628,7 +628,7 @@ sub tToISO {
 }
 
 # URL-encode data
-sub urlpseudoescape {     # we don't do a thorough job here, because it its not clear whether 
+sub urlpseudoescape {     # we don't do a thorough job here, because it is not clear whether 
                           # /a/b/c is a parameter ("/" must be encoded) or part of a path ("/" must not be encoded)
                           # Therefore we only escape spaces and characters > 127
   local ($_) = @_;
@@ -674,20 +674,6 @@ perl(1).
 =cut
 
 #################### main pod documentation end ###################
-
-package SeeAlso::Identifier::GND;
-
-sub hash {
-  my $self = shift @_;
-  if ( @_ ) {
-      $self->value(@_)}
-  return $self->indexed();
-}
-
-sub canonical {
-  my $self = shift @_;
-  return $self->normalized(@_);
-}
 
 1;
 

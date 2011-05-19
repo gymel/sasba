@@ -85,10 +85,10 @@ XxX
   $hdl->do("CREATE INDEX IF NOT EXISTS aliases ON repos(alias);") or croak("Setup error: ".$hdl->errstr);
 
   my ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("COUNT");
-  $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
+# $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
 
   ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("REMARK");
-  $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
+#  $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
 
   $hdl->do(<<"XxX"
 CREATE TABLE IF NOT EXISTS beacons (
