@@ -32,7 +32,7 @@ isa_ok($resultref, 'ARRAY', 'returned content');
 my $expect = << "XxX";
 #INSTITUTION: Example Corp, http://www.example.com
 #FORMAT: BEACON
-#VERSION: 0.2
+#VERSION: 0.1
 #TARGET: http://beacon.example.com/test/?format=sources&id={ID}
 #TIMESTAMP: 2011-05-19T15:49:19Z
 #REVISIT: 2011-05-20T15:49:19Z
@@ -111,6 +111,6 @@ while ( <SLURP> ) {
 close(SLURP);
 my @bexcess = keys %bexpected;
 is("@bexcess", "", "unprocessed identifiers from beacon export");
-#unlink('beacon.out');
+unlink('beacon.out');
 
 
