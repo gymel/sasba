@@ -1,0 +1,12 @@
+#FORMAT: BEACON
+#VERSION: 0.1
+#REMARK: Some test records
+#PREFIX: http://d-nb.info/gnd/{ID}
+#TARGET: http://www.deutsche-biographie.de/pnd{ID}.html
+#ALTTARGET: http://www.hls-dhs-dss.ch/textes/d/D{ALTID}.php
+118784226|de.wikisource.org|http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226 
+118784226|72|commons.wikimedia.org|http://commons.wikimedia.org/wiki/Category%3AOctave_Mirbeau
+103117741=45433|Châtelain, Jean-Jacques
+103117741=45432|Châtelain, Jacques-Jean
+118559796
+118784226|de.wikipedia.org|http://toolserver.org/~apper/pd/person/pnd-redirect/de/118784226

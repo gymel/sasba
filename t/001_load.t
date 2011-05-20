@@ -26,7 +26,7 @@ ok (defined $use2, "created db with dsn");
 isa_ok ($use2, 'SeeAlso::Source::BeaconAggregator');
 
 
-# init and load first file
+# init database
 ok($use2->init(), "init database");
 
 
