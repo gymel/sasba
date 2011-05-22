@@ -1,24 +1,18 @@
 # -*- perl -*-
 
-# t/020_stats_id.t - check dumps and maintenance 
+# t/020_stats.t - check dumps and maintenance 
 
-use Test::More tests => 124;
+use Test::More tests => 120;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator::Maintenance' );
-  use_ok( 'SeeAlso::Identifier::PND' );
 }
 
 # open database
 
 my $dsn = "testdb";
-my $idclass = SeeAlso::Identifier::PND->new();
-ok (defined $idclass, "created identifier object");
-isa_ok ($idclass, 'SeeAlso::Identifier::PND');
-isa_ok ($idclass, 'SeeAlso::Identifier::GND');
-isa_ok ($idclass, 'SeeAlso::Identifier');
 
-my $use = SeeAlso::Source::BeaconAggregator::Maintenance->new(dsn => $dsn, identifierClass => $idclass);
+my $use = SeeAlso::Source::BeaconAggregator::Maintenance->new(dsn => $dsn);
 ok (defined $use, "accessed db with dsn");
 isa_ok ($use, 'SeeAlso::Source::BeaconAggregator');
 
