@@ -44,14 +44,19 @@ SeeAlso service is achieved by using SeeAlso::Source::BeaconAggregator::Publishe
 
 =head1 USAGE
 
+Use the C<new()> method inherited from C<SeeAlso::Source::BeaconAggregator> to
+access an existing database or create a new one.
 
-=head2 SeeAlso::Source::BeaconAggregator Methods
+
+=head2 Database Methods
 
 =head3 init()
 
-Sets up and initializes the database for the object.
+Sets up and initializes the database structure for the object.
+This has to be done once after creating a new database and after
+upgrading this module.
 
-The repo table contains as columns all valid beacon fields plus 
+The C<repos> table contains as columns all valid beacon fields plus 
 the following administrative fields which have to be prefixed with 
 "_" in the interface:
 
@@ -123,8 +128,47 @@ Unique identifier count
 
 Just to store some remarks.
 
+=back
+
+The C<beacons> table stores the individual beacon entries from the input files.
+Its columns are:
+
+=over 8
+
+=item hash
+
+ Identifier. If a C<SeeAlso::Source::Identifier> instance is provided,
+ this will be transformed by the C<hash()> method.
+
+=item seqno
+
+ Sequence number of the beacon file in the database
+
+=item altid
+
+ optional identifier from an alternative identifier system for use
+ with ALTTARGET templates.
+
+=item hits
+
+ optional number of hits for this identifier in the given resource
+
+=item info
+
+ optional information text
+
+=item link
+
+ optional explicit URL   
 
 =back
+
+
+The C<osd> table contains C<key>, C<val> pairs for various metadata 
+concerning the collection as such, notably the values needed for
+the Open Search Description and the Header fields needed in case
+of publishing a beacon file for this collection.
+
 
 =cut
 
@@ -209,6 +253,7 @@ XxX
   return 1;    # o.k.
 };
 
+
 =head3 deflate()
 
 Maintenance action: performs VACCUUM, REINDEX and ANALYZE on the database
@@ -227,17 +272,26 @@ sub deflate {
   return 1;
 }
 
-=head3 ($seqno, $rec_ok, $message) = loadFile ( $file, $fields, %options ) 
+
+=head2 Handling of beacon files
+
+=head3 loadFile ( $file, $fields, %options ) 
 
 Reads a physical beacon file and stores it with a new Sequence number in the
 database.
+
+Returns a triple:
+
+ my ($seqno, $rec_ok, $message) = loadFile ( $file, $fields, %options ) 
 
 $seqno is undef on error
 
 $seqno and $rec_ok are zero with $message containing an explanation in case
 of no action taken
 
-$seqno is an positive integer if something was loaded.
+$seqno is an positive integer if something was loaded: The L<Sequence Number>
+(internal unique identifier) for the representation of the beacon file in
+the database.
 
 =over 8
 
@@ -517,7 +571,7 @@ XxX
 }
 
 
-=head3 processbeaconheader($self, $fieldref, [ %options] )
+=head4 processbeaconheader($self, $fieldref, [ %options] )
 
 Internal subroutine used by loadFile.
 
@@ -732,56 +786,6 @@ XxX
   return ($collno, "", $format, $ihandle, $rhandle, $osq);
 }
 
-=head3 headerfield ( $sq_or_alias, $key [, $value] )
-
-Gets or sets an meta or admin Entry for the constituent file indicated by $sq_or_alias
-
-=cut
-
-sub headerfield {
-  my ($self, $sq_or_alias, $key, $value) = @_;
-
-  my $dbkey = "";
-  if ( $dbkey = SeeAlso::Source::BeaconAggregator->beaconfields($key) ) {
-    }
-  elsif ( $key =~ /_(\w+)$/ ) {
-     $dbkey = $1}
-  else {
-     carp "Field $key not known";
-     return undef;
-    };
-
-  my ($cond, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($sq_or_alias);
-
-  my $osql = <<"XxX";
-SELECT $dbkey FROM repos $cond;
-XxX
-  my $osth = $self->{dbh}->prepare($osql) or croak("Could not prepare $osql: ".$self->{dbh}->errstr);
-  $osth->execute(@cval) or croak("Could not execute $osql:".$osth->errstr);
-  my $tmpval = $osth->fetchall_arrayref();
-  my @oval = map { hEncode($_, $key) } map { (defined $_->[0]) ? ($_->[0]) : () } @$tmpval;
-  my $rows = scalar @oval;
-
-  if ( (defined $value) and ($value ne "") ) {                # set
-      my $usql = <<"XxX";
-UPDATE OR FAIL repos SET $dbkey=? $cond;
-XxX
-      $value = hDecode($value, $key) || "";
-      my $usth = $self->{dbh}->prepare($usql) or croak("Could not prepare $usql: ".$self->{dbh}->errstr);
-      $rows = $usth->execute($value, @cval) or croak("Could not execute $usql:".$usth->errstr);
-    }
-  elsif ( defined $value ) {     # clear
-      my $dsql = <<"XxX";
-UPDATE OR FAIL repos SET $dbkey=? $cond;
-XxX
-      my $dsth = $self->{dbh}->prepare($dsql) or croak("Could not prepare $dsql: ".$self->{dbh}->errstr);
-      $rows = $dsth->execute(undef, @cval) or croak("Could not execute $dsql:".$dsth->errstr);
-    }
-  else {                         # read
-   }
-
-  return ($rows, @oval);
-}
 
 
 
@@ -1017,100 +1021,6 @@ sub utf_deduplicate {
   return $success;
 }
 
-=head3 listCollections ( [ $seqno_or_alias ] )
-
-Iterates over all Sequences and returns on each call an array of
-
-  Seqno, Alias, Uri, Modification time, Identifier Count and Unique identifier count
-
-Returns undef if done.
-
-=cut
-
-sub listCollections {
-  my ($self, $seqno_or_alias) = @_;
-
-  unless ( $self->{_iterator_listCollections} ) {
-      my ($constraint, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($seqno_or_alias);
-      my ($sql) =<<"XxX";
-SELECT seqno, alias, uri, mtime, counti, countu FROM repos $constraint;
-XxX
-      my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-      $sth->execute(@cval) or croak("Could not execute $sql: ".$sth->errstr);
-      $self->{_iterator_listCollections} = $sth;
-    };
-  my $onerow = $self->{_iterator_listCollections}->fetchrow_arrayref;
-  unless ( $onerow ) {
-      croak("Error listing Collections: $self->{_iterator_listCollections}->errstr") if $self->{_iterator_listCollections}->err;
-      delete $self->{_iterator_listCollections};
-      return ();
-    };
-  return @$onerow;
-}
-
-=head3 headers ( [ $seqno_or_alias ] ) 
-
-Iterates over all 
-
-For each iteration returns two hash references:
-
-=over 8
-
-=item 1
-     all official beacon fields
-
-=item 2
-     all administrative fields (_alias, ...), including two special ones:
-
-=over 8
-
-=item -live_count_id
-
-=item -live_unique_id
-
-=back
-
-=back
-
-=cut
-
-sub headers {
-  my ($self, $seqno_or_alias) = @_;
-
-  unless ( $self->{_iterator_info} ) {
-      my ($constraint,  @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($seqno_or_alias);
-      my ($sql) =<<"XxX";
-SELECT * FROM repos $constraint;
-XxX
-      my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-      $sth->execute(@cval) or croak("Could not execute $sql: ".$sth->errstr);
-      $self->{_iterator_info} = $sth;
-    };
-
-  my $info = $self->{_iterator_info}->fetchrow_hashref;
-  unless ( defined $info ) {
-      croak("Error listing Collections: $self->{_iterator_info}->errstr") if $self->{_iterator_info}->err;
-      delete $self->{_iterator_info};
-      return undef;
-    }
-
-  my $collno = $info->{seqno} || $seqno_or_alias;
-  my @livecounts = $self->{dbh}->selectrow_array("SELECT COUNT(*), COUNT(DISTINCT hash) FROM beacons WHERE seqno==$collno")
-      or croak("Could not count for $collno: ".$self->{dbh}->errstr);
-  my %meta = ('-live_count_id' => $livecounts[0] || 0, '-live_unique_id' => $livecounts[1] || 0, _seqno => $collno);
-  my %result = ();
-  while ( my($key, $val) = each %$info ) {
-      next unless defined $val;
-      my $pval = hEncode($val, $key);
-
-      if ( $key =~ /^bc(\w+)$/ ) {
-          $result{$1} = $pval}
-      else {
-          $meta{"_$key"} = $pval};
-    }
-  return \%result, \%meta;
-}
-
 =head3 unload ( [ $seqno_or_alias, %options ] ) 
 
 Deletes the sequence(s).
@@ -1241,6 +1151,156 @@ XxX
   return $trows;
 }
 
+
+=head2 Methods for headers
+
+=head3 ($rows, @oldvalues) = headerfield ( $sq_or_alias, $key [, $value] )
+
+Gets or sets an meta or admin Entry for the constituent file indicated by $sq_or_alias
+
+=cut
+
+sub headerfield {
+  my ($self, $sq_or_alias, $key, $value) = @_;
+
+  my $dbkey = "";
+  if ( $dbkey = SeeAlso::Source::BeaconAggregator->beaconfields($key) ) {
+    }
+  elsif ( $key =~ /_(\w+)$/ ) {
+     $dbkey = $1}
+  else {
+     carp "Field $key not known";
+     return undef;
+    };
+
+  my ($cond, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($sq_or_alias);
+
+  my $osql = <<"XxX";
+SELECT $dbkey FROM repos $cond;
+XxX
+  my $osth = $self->{dbh}->prepare($osql) or croak("Could not prepare $osql: ".$self->{dbh}->errstr);
+  $osth->execute(@cval) or croak("Could not execute $osql:".$osth->errstr);
+  my $tmpval = $osth->fetchall_arrayref();
+  my @oval = map { hEncode($_, $key) } map { (defined $_->[0]) ? ($_->[0]) : () } @$tmpval;
+  my $rows = scalar @oval;
+
+  if ( (defined $value) and ($value ne "") ) {                # set
+      my $usql = <<"XxX";
+UPDATE OR FAIL repos SET $dbkey=? $cond;
+XxX
+      $value = hDecode($value, $key) || "";
+      my $usth = $self->{dbh}->prepare($usql) or croak("Could not prepare $usql: ".$self->{dbh}->errstr);
+      $rows = $usth->execute($value, @cval) or croak("Could not execute $usql:".$usth->errstr);
+    }
+  elsif ( defined $value ) {     # clear
+      my $dsql = <<"XxX";
+UPDATE OR FAIL repos SET $dbkey=? $cond;
+XxX
+      my $dsth = $self->{dbh}->prepare($dsql) or croak("Could not prepare $dsql: ".$self->{dbh}->errstr);
+      $rows = $dsth->execute(undef, @cval) or croak("Could not execute $dsql:".$dsth->errstr);
+    }
+  else {                         # read
+   }
+
+  return ($rows, @oval);
+}
+
+=head3 ($resultref, $metaref) = headers ( [ $seqno_or_alias ] ) 
+
+Iterates over all 
+
+For each iteration returns two hash references:
+
+=over 8
+
+=item 1
+     all official beacon fields
+
+=item 2
+     all administrative fields (_alias, ...), including two special ones:
+
+=over 8
+
+=item -live_count_id
+
+=item -live_unique_id
+
+=back
+
+=back
+
+=cut
+
+sub headers {
+  my ($self, $seqno_or_alias) = @_;
+
+  unless ( $self->{_iterator_info} ) {
+      my ($constraint,  @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($seqno_or_alias);
+      my ($sql) =<<"XxX";
+SELECT * FROM repos $constraint;
+XxX
+      my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
+      $sth->execute(@cval) or croak("Could not execute $sql: ".$sth->errstr);
+      $self->{_iterator_info} = $sth;
+    };
+
+  my $info = $self->{_iterator_info}->fetchrow_hashref;
+  unless ( defined $info ) {
+      croak("Error listing Collections: $self->{_iterator_info}->errstr") if $self->{_iterator_info}->err;
+      delete $self->{_iterator_info};
+      return undef;
+    }
+
+  my $collno = $info->{seqno} || $seqno_or_alias;
+  my @livecounts = $self->{dbh}->selectrow_array("SELECT COUNT(*), COUNT(DISTINCT hash) FROM beacons WHERE seqno==$collno")
+      or croak("Could not count for $collno: ".$self->{dbh}->errstr);
+  my %meta = ('-live_count_id' => $livecounts[0] || 0, '-live_unique_id' => $livecounts[1] || 0, _seqno => $collno);
+  my %result = ();
+  while ( my($key, $val) = each %$info ) {
+      next unless defined $val;
+      my $pval = hEncode($val, $key);
+
+      if ( $key =~ /^bc(\w+)$/ ) {
+          $result{$1} = $pval}
+      else {
+          $meta{"_$key"} = $pval};
+    }
+  return \%result, \%meta;
+}
+
+=head3 listCollections ( [ $seqno_or_alias ] )
+
+Iterates over all Sequences and returns on each call an array of
+
+  Seqno, Alias, Uri, Modification time, Identifier Count and Unique identifier count
+
+Returns undef if done.
+
+=cut
+
+sub listCollections {
+  my ($self, $seqno_or_alias) = @_;
+
+  unless ( $self->{_iterator_listCollections} ) {
+      my ($constraint, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($seqno_or_alias);
+      my ($sql) =<<"XxX";
+SELECT seqno, alias, uri, mtime, counti, countu FROM repos $constraint;
+XxX
+      my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
+      $sth->execute(@cval) or croak("Could not execute $sql: ".$sth->errstr);
+      $self->{_iterator_listCollections} = $sth;
+    };
+  my $onerow = $self->{_iterator_listCollections}->fetchrow_arrayref;
+  unless ( $onerow ) {
+      croak("Error listing Collections: $self->{_iterator_listCollections}->errstr") if $self->{_iterator_listCollections}->err;
+      delete $self->{_iterator_listCollections};
+      return ();
+    };
+  return @$onerow;
+}
+
+=head2 Statistics
+
 =head3 idStat ( [ $seqno_or_alias, %options ] ) 
 
 Count identifiers for the given pattern.
@@ -1287,7 +1347,7 @@ XxX
 };
 
 
-=head3 idCounts ( [ $seqno_or_alias, %options ] ) 
+=head3 idCounts ( [ $pattern, %options ] ) 
 
 Iterates through the entries according to the optional id filter expression.
 
@@ -1401,6 +1461,8 @@ XxX
 };
 
 
+=head2 Manipulation of global metadata: Open Search Description
+
 =head3 setOSD ( $field, $value }
 
 Sets the field $field of the OpenSearchDescription to $value.
@@ -1449,13 +1511,14 @@ XxX
   return 1;
 }
 
+=head2 Manipulation of global metadata: Beacon Metadata
+
+These headers are used when you will be publishing a beacon file for the collection.
 
 =head3 setBeaconMeta ( $field, $value )
 
 Sets the field $field of the Beacon meta table (used to generate a BEACON file for this
 service) to $value.
-
-
 
 =cut
 

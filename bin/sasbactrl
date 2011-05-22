@@ -82,12 +82,20 @@ Actions and Arguments:
 
 =over 8
 
-=item B<--dbfile>
+=item B<--dbfile> C<filename>
 
-=item B<--dsn>
+Name of database file relative to C<dbroot>
+
+=item B<--dsn> C<basename>
+
+Database file will be the file E<basename-db> in folder E<basename>,
+giving SQLite enough headroom for temporary files. 
+Relative to C<dbroot>.
+
 
 =item B<--dbroot>
 
+Prefix for --dbfile or --dsn (relative paths only)
 
 
 =item B<--force>
@@ -188,7 +196,7 @@ or of SeeAlso::Source::BeaconAggregator::Publisher
 
 =over 8
 
-=item init
+=item C<init>
 
 Creates a database with the necessary tables
 
@@ -197,7 +205,11 @@ Creates a database with the necessary tables
 if ( $action eq "init" ) {
     $db->init() or die("could not setup database structure")}
 
-=item list
+=item C<list>
+
+Interface to the C<listCollections> method.
+
+List all loaded beacon file with identifier counts.
 
 =cut
 
@@ -212,7 +224,13 @@ elsif ( $action eq "list" ) {
       };
   }
 
-=item status
+=item C<status>
+
+Prints the complete administrative fields and beacon fields and overview
+of the revisit policy for the beacon source(s) given by the first argument.
+
+The first argument may be empty or a pattern to produce the information for
+more than one source.
 
 =cut
 
@@ -302,7 +320,11 @@ elsif ( $action eq "status" ) {
       }
   }
 
-=item headers
+=item C<headers>
+
+Interface to the C<headers> method.
+
+Prints all OSD fields and then all beacon fields.
 
 =cut
 
@@ -346,22 +368,18 @@ elsif ( $action eq "header" ) {
       };
   }
 
-=item unload
+=item C<load>
 
-=item purge
+  load I<alias>, I<uri>, I<datafile>
 
-=cut
-elsif ( ($action eq "unload") or ($action eq "purge") ) {
-    my $seqno_or_alias = shift @ARGV or die "Please specify alias, pattern or SeqNo";
-    if ( $db->$action($seqno_or_alias, %passopts) ) {
-        refreshOSD(1)}
-    else {
-        warn "did not do anything\n";
-        refreshOSD($force) if $force;
-      };
-  }
+Interface to the C<loadFile> or C<update> method
 
-=item load
+Load beacon data from Uri (if I<uri> is given) or physical file
+from disk (I<datafile> must be given). 
+
+The beacon file will under the alias I<alias> be ready for 
+later updates.
+
 
 =cut
 
@@ -380,7 +398,23 @@ elsif ( $action eq "load" ) {
     refreshOSD($force);
   }
 
-=item update
+=item C<update>
+
+Interface to the C<update> method
+
+(Re)load beacon files with known URIs according
+to the following policy: Respect the #REVISIT hint, assume a #REVISIT
+period of 24h for beacon files without. Wait at least 5% of the file's
+age (difference between last updateate attempt and modification time)
+before trying again. Wait at least 4h anyway. However force reload
+after a couple of months.
+
+The C<update> method itself detects illegal headers and if the 
+beacon file was modified at all and may skip loading the file.
+Use the C<--force> option to override the test on modification time
+or clear the C<_mtime> field.
+
+When called with no arguments, update B<all> beacon files.
 
 =cut
 
@@ -474,14 +508,70 @@ elsif ( $action eq "update" ) {
     refreshOSD(1) if $did or $force;
   }
 
-=item idstat
+=item C<purge>
+
+Interface to the <purge> method.
+
+Clears all beacon data for the seqnos or aliases given by
+the first argument: The beacon source with its metadata
+remains known to the database.
+
+The argument may be a pattern, but the C<--force>
+option is needed if actually more than one beacon file is
+to be purged).
+
+OSD fields are rebuild if something was done or C<--force>
+is given.
+
+=item C<unload>
+
+Interface to the <unload> method.
+
+Clears all beacon data B<and> removes the listed headers
+for the seqnos or aliases given by the first argument:
+Any knowledge of the beacon source is effectively deleted
+from the database.
+
+The argument may be a pattern, but the C<--force>
+option is needed if actually more than one beacon file is
+to be unloaded.
+
+OSD fields are rebuild if something was done or C<--force>
+is given.
+
+=cut
+elsif ( ($action eq "unload") or ($action eq "purge") ) {
+    my $seqno_or_alias = shift @ARGV or die "Please specify alias, pattern or SeqNo";
+    if ( $db->$action($seqno_or_alias, %passopts) ) {
+        refreshOSD(1)}
+    else {
+        warn "did not do anything\n";
+        refreshOSD($force) if $force;
+      };
+  }
+
+=item C<idstat>
+
+Interface to the C<idStat> method. 
+
+Counts indentifiers, optionally only from those beacon files with seqno or alias restricted by the first argument.
+
+Recognized options are C<distinct> and C<verbose>.
 
 =cut
 
 elsif ( $action eq "idstat" ) {
     print $db->idStat($ARGV[0], %passopts)." identifiers\n";}
 
-=item idcounts
+=item C<idcounts>
+
+Interface to the C<idCounts> method. 
+
+Counts identifiers, optionally only these identifiers which
+match the pattern given by the first argument.
+
+Recognized options are C<distinct> and C<verbose>.
+
 
 =cut
 
@@ -490,7 +580,13 @@ elsif ( $action eq "idcounts" ) {
         print "@list\n"};
   }
 
-=item idlist
+=item C<idlist>
+
+Interface to the C<idList> method. 
+
+For each identifier list a complicated list of entries found.
+Optionally only these identifiers which match the pattern given 
+by the first argument are shown.
 
 =cut
 
@@ -509,9 +605,22 @@ elsif ( $action eq "idlist" ) {
       };
   }
 
-=item dumpmeta
+=item C<dumpmeta>
 
-=item beacon
+Interface to the C<dumpmeta> method.
+
+Lists all header fields from the database.
+
+
+=item C<beacon>
+
+Interface to the C<beacon> method.
+
+Produces a beacon file (header fields plus beacon entries)
+for the database.
+
+The Base URL for the service to be denoted is mandatory as
+first parameter.
 
 =cut
 
@@ -531,7 +640,10 @@ elsif ( ($action eq "dumpmeta") or ($action eq "beacon") ) {
         print @$headerref};
   }
 
-=item loadmeta
+=item C<loadmeta>
+
+Completely exchanges the OSD and beacon meta files for the 
+database by the contents of the file given as first argument.
 
 =cut
 
@@ -562,9 +674,15 @@ elsif ( $action eq "loadmeta" ) {
          refreshOSD($force)};
   }
 
-=item dumposd
+=item C<dumposd>
 
-=item refreshosd
+Shows Open Search Description.
+
+=item C<refreshosd>
+
+Recalculates default Open Search Description (list constituents as
+description, give counts, find examples, ...)
+
 
 =cut
 elsif ( ($action eq "dumposd") or ($action eq "refreshosd") ) {
@@ -591,7 +709,10 @@ elsif ( ($action eq "dumposd") or ($action eq "refreshosd") ) {
       };
   }
 
-=item deflate
+=item C<deflate>
+
+Interface to the C<deflate> method (DEFLATE+REINDEX+ANALYZE the
+SQLite database);
 
 =cut
 
@@ -599,6 +720,8 @@ elsif ( $action eq "deflate" ) {
     $db->deflate}
 else {
     pod2usage({-message => "Unsupported action '$action'", -exitval => 3})}
+
+
 
 
 =back

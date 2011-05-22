@@ -137,6 +137,24 @@ mandatory entry are returned.
   ($internal_col, $specs, $mandatory)
       = SeeAlso::Source::BeaconAggregator->beaconfields('FORMAT');
 
+Fields are:
+
+  # mandatory
+ FORMAT, TARGET
+  # as of PND/BEACON spec
+ VERSION, FEED, TIMESTAMP, REVISIT, UPDATE
+ CONTACT, INSTITUTION, ISIL, 
+  # from the experimental BEACON spec
+ MESSAGE, ONEMESSAGE, SOMEMESSAGE
+ PREFIX, EXAMPLES
+  # later additions
+ COUNT, REMARK
+  # current practise
+ NAME
+  # experimental extension "Konkordanzformat"
+ ALTTARGET, IMGTARGET
+
+
 =cut
 
 sub beaconfields {
@@ -185,7 +203,15 @@ for the OpenSearchDescription:
 With given parameter $what returns the value for the given OpenSearchDescription
 element:
 
-  $osd_value = SeeAlso::Source::BeaconAggregator->beaconfields('AdultContent');
+  $osd_value = SeeAlso::Source::BeaconAggregator->beaconfields('LongName');
+
+OSD elements are
+
+ ShortName, Description
+ Contact, Tags, LongName, Developer, Attribution, SyndicationRight, AdultContent
+ Language, InputEncoding, OutputEncoding
+  # special for SeeAlso::Family
+ Example, Examples, BaseURL, DateModified, Source
 
 =cut
 
@@ -449,6 +475,7 @@ sub prepare_query {
 
 
 ###
+
 =head2 Auxiliary Methods
 
 Sequence numbers (Seqnos) are primary keys to the database table where
@@ -580,7 +607,7 @@ XxX
 }
 
 
-=head2 findExample ( $goal, $offset, [ $sth ])
+=head3 findExample ( $goal, $offset, [ $sth ])
 
 Returns a hashref
 
