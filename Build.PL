@@ -26,6 +26,7 @@ my $build = Module::Build->new(
 		},
 	build_requires => {
       SeeAlso::Identifier::GND	=> '0.54',
+	      Test::More	=> '0.90',
 		},
 	license => 'perl',
 	create_makefile_pl => 'traditional',

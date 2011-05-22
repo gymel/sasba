@@ -400,7 +400,7 @@ sub loadFile {
             }
         }
       else {
-         s/^\s+//;
+         s/^\s+//; s/\s+$//;
          my ($id, $altid, @rest);
          ($id, @rest) = split(/\s*\|\s*/, $_, 4);
          ($id, $altid) = split(/\s*=\s*/, $id, 2) if $id;
@@ -431,17 +431,19 @@ sub loadFile {
              print "WARNING: unparseable content >$_< [$showme l.$.]"};
 
          unless ( $link ) {
-             if ( $format =~ /\bnoTARGET\b/ ) {
+             if ( ($format =~ /\bhasTARGET\b/) ) {   # ok
+               }
+             elsif ( $altid && ($format =~ /\baltTARGET\b/) ) {   # also ok
+               }
+             elsif ( $format =~ /\bnoTARGET\b/ ) {
                  print "NOTICE: discarding >$id<".(defined $hits ? " ($hits)" : "")." without link [$showme l.$.]\n" if $options{'verbose'} > 1;
                  $recill++;
                  next lines;
                }
-             elsif ( $format =~ /\baltTARGET\b/ ) {
-#                 unless ( $altid ) {
-#                     print "NOTICE: discarding >$id<".(defined $hits ? " ($hits)" : "")." without altid nor link [$showme l.$.]\n";  # if $options{'verbose'};
-#                     $recill++;
-#                     next lines;
-#                   }
+             else {
+                 print "WARNING: discarding >$id<".(defined $hits ? " ($hits)" : "")." without link [$showme l.$.] (assertion failed)\n";
+                 $recill++;
+                 next lines;
                }
            };
 
@@ -619,7 +621,7 @@ sub processbeaconheader {
       if (  $fieldref->{'FORMAT'} =~ $self->{accept}->{'FORMAT'} ) {
           $format = $fieldref->{'FORMAT'}}
       else {
-          push(@carp, "ERROR: only FORMAT '".$self->{accept}->{'FORMAT'}."' are supported")}
+          push(@carp, "ERROR: only FORMAT '".$self->{accept}->{'FORMAT'}."' are supported, this is ".$fieldref->{'FORMAT'})}
     }
   elsif ( $fieldref->{'FORMAT'} ) {
       $format = $fieldref->{'FORMAT'}}
@@ -632,7 +634,7 @@ sub processbeaconheader {
     };
   if ( $self->{accept}->{'VERSION'} ) {
       ($fieldref->{'VERSION'} =~ $self->{accept}->{'VERSION'})
-       || push(@carp, "ERROR: only VERSION '".$self->{accept}->{'VERSION'}."' is supported");
+       || push(@carp, "ERROR: only VERSION '".$self->{accept}->{'VERSION'}."' is supported, this is ".$fieldref->{'VERSION'});
     };
 
   if ( $fieldref->{'ALTTARGET'} ) {
@@ -675,7 +677,9 @@ sub processbeaconheader {
       $fieldref->{'TARGET'} = "" unless defined $fieldref->{'TARGET'};
       my $parsed = hDecode($fieldref, 'TARGET');
       if ( $parsed && ($parsed =~ /(^|[^%])(%.)*%1\$s/) && ($parsed !~ /(^|[^%])(%.)*%[2-9]\$s/) ) {
-          $fieldref->{'TARGET'} = $parsed}
+          $fieldref->{'TARGET'} = $parsed;
+          $format .= " -hasTARGET";
+        }
       elsif ( $parsed ) {
           push(@carp, "ERROR: header field #TARGET must contain placeholder {ID} and not {ALTID}");
           delete $fieldref->{'TARGET'};

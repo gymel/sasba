@@ -82,13 +82,13 @@ Actions and Arguments:
 
 =over 8
 
-=item B<--dbfile> C<filename>
+=item B<--dbfile> I<filename>
 
 Name of database file relative to C<dbroot>
 
-=item B<--dsn> C<basename>
+=item B<--dsn> I<basename>
 
-Database file will be the file E<basename-db> in folder E<basename>,
+Database file will be the file I<basename-db> in folder I<basename>,
 giving SQLite enough headroom for temporary files. 
 Relative to C<dbroot>.
 
@@ -100,9 +100,15 @@ Prefix for --dbfile or --dsn (relative paths only)
 
 =item B<--force>
 
+Use with care.
+
 =item B<--verbose>
 
+Sometimes shows more.
+
 =item B<--quiet>
+
+Sometimes shows less.
 
 =item B<--itype>
 

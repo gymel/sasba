@@ -18,6 +18,7 @@ WriteMakefile
                            'SeeAlso::Identifier' => '0.46',
                            'HTTP::Date' => '5.0',
                            'Carp' => 0,
+                           'Test::More' => '0.90',
                            'SeeAlso::Server' => '0.57',
                            'SeeAlso::Response' => '0.54',
                            'File::Temp' => 0,

@@ -4,6 +4,7 @@ author:
   - 'Thomas Berger <ThB@gymel.com>'
 build_requires:
   SeeAlso::Identifier::GND: 0.54
+  Test::More: 0.90
 configure_requires:
   Module::Build: 0.36
 generated_by: 'Module::Build version 0.3613'
