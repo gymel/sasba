@@ -38,7 +38,7 @@ SeeAlso::Source::BeaconAggregator - Beacon files as source for SeeAlso::Server
   use SeeAlso::Source::BeaconAggregator;
 
   my $srcdescription = {
-        "ShortName" => "TestServic",                                # 16 Characters
+        "ShortName" => "TestService",                               # 16 Characters
          "LongName" => "Sample SeeAlso Beacon Aggregator",          # 48 characters
 #     "Description" => "The following services are contained: ...", # 1024 Characters
       "DateModfied" => "...",
@@ -307,7 +307,7 @@ Inherited from SeeAlso::Source.
 sub about {
   my $self = shift;
   $self->enrichdescription() unless $self->{descriptioncached};
-  return $self->SUPER::description(@_);
+  return $self->SUPER::about(@_);
 }
 
 
@@ -353,7 +353,7 @@ sub enrichdescription {
       my %combined = (%result, %{$self->{description}});
       $self->{description} = \%combined;
     }
-  else {
+  elsif ( %result ) {
       $self->{description} = \%result};
 
   $self->{descriptioncached} = 1;
@@ -382,38 +382,39 @@ sub query {          # SeeAlso-Simple response
 SELECT beacons.hash, beacons.altid, beacons.seqno, beacons.hits, beacons.info, beacons.link,
        repos.$tfield, repos.$afield, repos.$mfield, repos.$m1field, repos.$msfield, repos.$dfield, repos.$nfield, repos.$ifield
   FROM beacons NATURAL LEFT JOIN repos
-  WHERE beacons.hash=? 
+  WHERE beacons.hash=?
   ORDER BY repos.sort, repos.alias;
 XxX
   my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
   $sth->execute($hash) or croak("Could not execute $sql: ".$sth->errstr);
   my %didalready;
-  while ( my @onerow = $sth->fetchrow_array ) {
-      my $hits = $onerow[3];
+  while ( my $onerow = $sth->fetchrow_arrayref() ) {
+#      last unless defined $onerow->[0];           # strange end condition
+      my $hits = $onerow->[3];
 
       my $uri;
-      if ( $uri = $onerow[5] ) {                # Expliziter Link
+      if ( $uri = $onerow->[5] ) {                # Expliziter Link
         }
-      elsif ( $onerow[1] && $onerow[7] ) {      # Konkordanzformat
-          $uri = sprintf($onerow[7], $pretty, urlpseudoescape($onerow[1]))}
-      elsif ( $onerow[6] ) {                    # normales Beacon-Format
-          $uri = sprintf($onerow[6], $pretty)};
+      elsif ( $onerow->[1] && $onerow->[7] ) {    # Konkordanzformat
+          $uri = sprintf($onerow->[7], $pretty, urlpseudoescape($onerow->[1]))}
+      elsif ( $onerow->[6] ) {                    # normales Beacon-Format
+          $uri = sprintf($onerow->[6], $pretty)};
       next unless $uri;
 
-      my $label =  $onerow[8] || $onerow[11] || $onerow[12] || $onerow[13] || "???";
+      my $label =  $onerow->[8] || $onerow->[11] || $onerow->[12] || $onerow->[13] || "???";
       if ( $hits == 1 ) {
-          $label = $onerow[9] if $onerow[9]}
+          $label = $onerow->[9] if $onerow->[9]}
       elsif ( $hits == 0 ) {
-          $label = $onerow[10] if $onerow[10]}
+          $label = $onerow->[10] if $onerow->[10]}
       elsif ( $hits ) {
           ($label .= " (%s)") unless ($label =~ /(^|[^%])%s/)};
 
-      $label .= " [".$onerow[4]."]" if $onerow[4];
+      $label .= " [".$onerow->[4]."]" if $onerow->[4];
       $label = sprintf($label, $hits);
 
 #     my $description = $hits;     # entsprechend opensearchsuggestions: pleonastisch, langweilig
-#     my $description = $onerow[12] || $onerow[13] || $onerow[8] || $onerow[10] || $onerow[5]; # NAME or INSTITUTION or SOMEMESSAGE or MESSAGE
-      my $description = $onerow[13] || $onerow[12] || $onerow[8] || $onerow[10] || $onerow[5]; # INSTITUTION or NAME or SOMEMESSAGE or MESSAGE
+#     my $description = $onerow->[12] || $onerow->[13] || $onerow->[8] || $onerow->[10] || $onerow->[5]; # NAME or INSTITUTION or SOMEMESSAGE or MESSAGE
+      my $description = $onerow->[13] || $onerow->[12] || $onerow->[8] || $onerow->[10] || $onerow->[5]; # INSTITUTION or NAME or SOMEMESSAGE or MESSAGE
 
       $response->add($label, $description, $uri) unless $didalready{join("\x7f", $label, $description, $uri)}++;
     }
@@ -492,7 +493,7 @@ XxX
 
 =head3 RepoCols ( [ $colname [, $seqno_or_alias ]] ) 
 
-Return all values of column (header field) $colname [alias] 
+Return a hashref indexed by seqence number of all values of column (header field) $colname [alias] 
 optionally constrained by a SeqNo or Alias.
 
 Default for $colname is '_alias'.
@@ -559,8 +560,9 @@ XxX
   $sth->execute(($key ? ($key) : ())) or croak("Could not execute $sql: ".$sth->errstr);
 
   my %result = ();
-  while ( my @ary = $sth->fetchrow_array ) {
-      my ($key, $val) = @ary;
+  while ( my $aryref = $sth->fetchrow_arrayref ) {
+      my ($key, $val) = @$aryref;
+#     last unless defined $key;     # undef on first call if nothing to be delivered?
       next if $key =~ /^bc/;        # BeaconMeta Fields smuggled in
       if ( exists $result{$key} ) {
           if ( ref($result{$key}) ) {
@@ -603,18 +605,21 @@ XxX
       $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
       $_[3] = $sth if defined $_[3];
     };
+  $offset ||= 0;
   $sth->bind_param(1, $goal, SQL_INTEGER);
   $sth->bind_param(2, $offset, SQL_INTEGER);
-  $sth->execute() or croak("Could not execute canned sql (findExampe): ".$sth->errstr);
-  if ( my @onerow = $sth->fetchrow_array ) {
+  $sth->execute() or croak("Could not execute canned sql (findExample): ".$sth->errstr);
+  if ( my $onerow = $sth->fetchrow_arrayref ) {
       if ( defined $self->{identifierClass} ) {
 	  my $c = $self->{identifierClass};
-          $c->hash($onerow[0]);
+# compat: hash might not take an argument, must resort to value, has to be cleared before...
+          $c->value("");
+          my $did = $c->hash($onerow->[0]) || $c->value($onerow->[0]);
           my $expanded = $c->can("pretty") ? $c->pretty() : $c->value();
-          return {id=>$expanded, response=>"$onerow[1]/$onerow[2]"};
+          return {id=>$expanded, response=>"$onerow->[1]/$onerow->[2]"};
         }
       else {
-          return {id=>$onerow[0], response=>"$onerow[1]/$onerow[2]"}};
+          return {id=>$onerow->[0], response=>"$onerow->[1]/$onerow->[2]"}};
     };
   return undef;
 };

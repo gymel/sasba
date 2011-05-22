@@ -27,7 +27,7 @@ our %Defaults = (
     "uAformatname" => "sources",
     "beaconformatname" => "beacon",
     "FORMAT"  => "BEACON",
-    "VERSION" => $VERSION,
+    "VERSION" => "0.1",             # no other exist
 );
 
 use SeeAlso::Source::BeaconAggregator;
@@ -159,7 +159,9 @@ XxX
       $rows++;
       my $expanded = $row->[0];
       if ( defined $c ) {
-          $c->hash($row->[0]);
+# compat: hash might not take an argument, must resort to value, has to be cleared before...
+	  $c->value("");
+          my $did = $c->hash($row->[0]) || $c->value($row->[0]);
           $expanded = $c->can("pretty") ? $c->pretty() : $c->value();
         }
       print $expanded.(($row->[1] > 1) ? "|".$row->[1] : "")."\n"}
@@ -184,8 +186,8 @@ XxX
   $metasth->execute() or croak("Could not execute $metasql: ".$metasth->errstr);
 
   my (%osd, %beaconmeta);
-  while ( my @ary = $metasth->fetchrow_array ) {
-      my ($key, $val) = @ary;
+  while ( my $aryref = $metasth->fetchrow_arrayref ) {
+      my ($key, $val) = @$aryref;
       next unless $val;
       if ($key =~ s/^bc// ) {        # BeaconMeta Fields
           $beaconmeta{$key} = $val}
@@ -243,8 +245,8 @@ XxX
   $beaconmeta{'CONTACT'} ||= $self->{Contact} || $osd{'Contact'};
   $beaconmeta{'DESCRIPTION'} ||= $self->{Description} || $osd{'Description'};
   $beaconmeta{'NAME'} ||= $self->{ShortName} || $osd{'ShortName'};
-  foreach ( grep !/^(FORMAT|REVISIT|TARGET|TIMESTAMP|VERSION)$/, sort keys %beaconmeta ) {
-      next unless my $val = $preset->{_} || $beaconmeta{$_};
+  foreach ( grep !/^(FORMAT|REVISIT|TARGET|TIMESTAMP|VERSION)$/, SeeAlso::Source::BeaconAggregator->beaconfields() ) {
+      next unless my $val = $preset->{$_} || $beaconmeta{$_};
       next if $val =~ /^-/;
       $val =~ s/\s+/ /g; $val =~ s/^\s+//; $val =~ s/\s+$//;
       push(@result, "#$_: $val\n");
@@ -368,28 +370,28 @@ XxX
   my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
   $sth->execute($hash) or croak("Could not execute $sql: ".$sth->errstr);
   my @rawres;
-  while ( my @onerow = $sth->fetchrow_array ) {
-      my $uri = $onerow[3];         # Evtl. Expliziter Link
+  while ( my $onerow = $sth->fetchrow_arrayref ) {
+      my $uri = $onerow->[3];         # Evtl. Expliziter Link
       my $guri = "";
 
-      if ( $onerow[0] ) {      # Konkordanzformat
-          $uri ||= sprintf($onerow[5] || $onerow[4], $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($onerow[0]));
-          $guri = sprintf($onerow[6], $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($onerow[0])) if $onerow[6];
+      if ( $onerow->[0] ) {      # Konkordanzformat
+          $uri ||= sprintf($onerow->[5] || $onerow->[4], $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($onerow->[0]));
+          $guri = sprintf($onerow->[6], $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($onerow->[0])) if $onerow->[6];
         }
-      elsif ( $onerow[4] ) {                    # normales Beacon-Format
-          $uri = sprintf($onerow[4], $pretty);
-          $guri = sprintf($onerow[6], $pretty) if $onerow[6];
+      elsif ( $onerow->[4] ) {                    # normales Beacon-Format
+          $uri = sprintf($onerow->[4], $pretty);
+          $guri = sprintf($onerow->[6], $pretty) if $onerow->[6];
         };
       next unless $uri;
 
 #                       #NAME         #INSTITUTION  _alias
       my $label;
-      if ( $label = $onerow[7] ) { #MESSAGE 
-          $label = sprintf($label, $onerow[1] || "...")}
-      elsif ( $label = $onerow[8] || $onerow[9] || $onerow[10] || "???" ) {
-          $label .= " (".$onerow[0].")" if $onerow[0]}
+      if ( $label = $onerow->[7] ) { #MESSAGE 
+          $label = sprintf($label, $onerow->[1] || "...")}
+      elsif ( $label = $onerow->[8] || $onerow->[9] || $onerow->[10] || "???" ) {
+          $label .= " (".$onerow->[0].")" if $onerow->[0]}
 
-      push(@rawres, [$uri, $guri, $label, $onerow[10], $onerow[2]]);
+      push(@rawres, [$uri, $guri, $label, $onerow->[10], $onerow->[2]]);
     };
   my $hits = scalar @rawres;
 
@@ -509,7 +511,8 @@ SELECT COUNT(DISTINCT seqno) FROM beacons WHERE hash=?;
 XxX
   my $countsth = $self->{dbh}->prepare($countsql) or croak("Could not prepare $countsql: ".$self->{dbh}->errstr);
   $countsth->execute($hash) or croak("Could not execute $countsql: ".$countsth->errstr);
-  my $hits = $countsth->fetchrow_array || 0;
+  my $hitsref = $countsth->fetchrow_arrayref;
+  my $hits = $hitsref->[0] || 0;
 
   my ($osd, $beaconmeta) = $self->get_meta;
   my $prefix = $beaconmeta->{'PREFIX'} || "";
@@ -728,6 +731,25 @@ XxX
   return join("\n", @result);
 }
 
+
+=head2 get_meta ()
+
+Returns a pair of hash references:
+
+=over 8
+
+=item 1
+
+OSD fields
+
+=item 2
+
+Beacon header fields
+
+=back
+
+=cut
+
 sub get_meta {
   my ($self) = @_;
 
@@ -737,8 +759,8 @@ XxX
   my $metasth = $self->{dbh}->prepare($metasql) or croak("Could not prepare $metasql: ".$self->{dbh}->errstr);
   $metasth->execute() or croak("Could not execute $metasql: ".$metasth->errstr);
   my (%osd, %beaconmeta);
-  while ( my @ary = $metasth->fetchrow_array ) {
-      my ($key, $val) = @ary;
+  while ( my $aryref = $metasth->fetchrow_arrayref ) {
+      my ($key, $val) = @$aryref;
       next unless $val;
       if ($key =~ s/^bc// ) {        # BeaconMeta Fields
           $beaconmeta{$key} = $val}

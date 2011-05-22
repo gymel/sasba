@@ -2,18 +2,22 @@
 
 # t/020_stats.t - check dumps and maintenance 
 
-use Test::More tests => 120;
+use Test::More tests => 123;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator::Maintenance' );
+  use_ok( 'SeeAlso::Identifier' );
 }
 
 # open database
 
 my $dsn = "testdb";
+my $idclass = SeeAlso::Identifier->new();
+ok (defined $idclass, "created identifier object");
+isa_ok ($idclass, 'SeeAlso::Identifier');
 
-my $use = SeeAlso::Source::BeaconAggregator::Maintenance->new(dsn => $dsn);
-ok (defined $use, "accessed db with dsn");
+my $use = SeeAlso::Source::BeaconAggregator::Maintenance->new(dsn => $dsn, identifierClass => $idclass);
+ok (defined $use, "accessed db with dsn and identifier class");
 isa_ok ($use, 'SeeAlso::Source::BeaconAggregator');
 
 # idStat
@@ -71,14 +75,14 @@ is("@cexcess", "", "undelivered identifiers for distinct idCounts");
 # idList
 my %iexpected = (
   '118784226' => {"1:" => ["", "", "", ""], 
-                  "2:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
+                  "3:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
                  },
   '132464462' => {"1:" => [1, "", "", ""]},
   '118624458' => {"1:" => [2, "", "", ""]},
-  '103117741' => {"2:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
-                  "2:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"]
+  '103117741' => {"3:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
+                  "3:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"]
                  },
-  '118559796' => {"2:" =>, ["", "", "", ""]},
+  '118559796' => {"3:" =>, ["", "", "", ""]},
 );
 while ( my (@ilist) = $use->idList() ) {
     ok(@ilist > 1, 'idList gave a tuple');
@@ -93,7 +97,7 @@ while ( my (@ilist) = $use->idList() ) {
         ok($seqno = $rowref->[0], 'defined seqno');
         my $altid = $rowref->[4];
         my $seqref;
-        ok($seqref = $testref->{"$seqno:$altid"}, "idList returned unexpected seqno:altid $seqno:$altid");
+        ok($seqref = $testref->{"$seqno:$altid"}, "idList returned unexpected seqno:altid >$seqno:$altid<");
         $seqref ||= [];
         is($rowref->[1], $seqref->[0], "[idList $id/$seqno:$altid]:  (hits)");
         is($rowref->[2], $seqref->[1], "[idList $id/$seqno:$altid]:  (info)");
@@ -124,7 +128,7 @@ while ( my (@ilist) = $use->idList("%44%") ) {
         ok($seqno = $rowref->[0], 'defined seqno');
         my $altid = $rowref->[4];
         my $seqref;
-        ok($seqref = $testref->{"$seqno:$altid"}, "idList with pattern returned unexpected seqno:altid $seqno:$altid");
+        ok($seqref = $testref->{"$seqno:$altid"}, "idList with pattern returned unexpected seqno:altid >$seqno:$altid<");
         $seqref ||= [];
         is($rowref->[1], $seqref->[0], "[idList with pattern $id/$seqno:$altid]:  (hits)");
         is($rowref->[2], $seqref->[1], "[idList with pattern $id/$seqno:$altid]:  (info)");

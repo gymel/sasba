@@ -51,6 +51,81 @@ SeeAlso service is achieved by using SeeAlso::Source::BeaconAggregator::Publishe
 
 Sets up and initializes the database for the object.
 
+The repo table contains as columns all valid beacon fields plus 
+the following administrative fields which have to be prefixed with 
+"_" in the interface:
+
+=over 8
+
+=item seqno
+
+Sequence number: Is incremented on any successfull load
+
+=item alias
+
+Unique key: On update older seqences with the same alias are 
+automatically discarded. Most methods take an alias as
+argument thus obliterating the need to determine the sequence
+number.
+
+=item sort
+
+optional sort key
+
+
+=item uri
+
+Overrides the #FEED header for updates
+
+=item ruri
+
+Real uri from which the last instance was loaded
+
+
+=item ftime
+
+Fetch time: Timestamp as to when this instance was loaded
+
+Clear this or mtime to force automatic reload.
+
+=item fstat
+
+Short statistics line of last successful reload on update.
+
+
+=item mtime
+
+Modification time: Timestamp of the file / HTTP object from which this instance was loaded.
+Identical to ftime if no timestamp is provided
+
+Clear this or ftime to force automatic reload on update.
+
+
+=item utime
+
+Timestamp of last update attempt
+
+=item ustat
+
+Short status line of last update attempt.
+
+
+=item counti
+
+Identifier count
+
+=item countu
+
+Unique identifier count
+
+
+=item admin
+
+Just to store some remarks.
+
+
+=back
+
 =cut
 
 sub init {
@@ -191,9 +266,11 @@ Alias are updated, identifiers not accounted for any more are
 eventually discarded. 
 
 =cut
+
 sub loadFile {
   my ($self, $file, $fields, %options) = @_;
   $options{'verbose'} = $self->{'verbose'} unless exists $options{'verbose'};
+  $options{'verbose'} ||= 0;
   if ( ! $file ) {
       croak("Missing file argument")}
   elsif ( ! -r $file ) {
@@ -300,17 +377,17 @@ sub loadFile {
              print "WARNING: unparseable content >$_< [$showme l.$.]"};
 
          unless ( $link ) {
-             if ( $format =~ /\baltTARGET\b/ ) {
-                 unless ( $altid ) {
-                     print "NOTICE: discarding >$id< ($hits) without altid nor link [$showme l.$.]\n";  # if $options{'verbose'};
-                     $recill++;
-                     next lines;
-                   }
-               }
-             elsif ( $format =~ /\bnoTARGET\b/ ) {
-                 print "NOTICE: discarding >$id< ($hits) without link [$showme l.$.]\n" if $options{'verbose'} > 1;
+             if ( $format =~ /\bnoTARGET\b/ ) {
+                 print "NOTICE: discarding >$id<".(defined $hits ? " ($hits)" : "")." without link [$showme l.$.]\n" if $options{'verbose'} > 1;
                  $recill++;
                  next lines;
+               }
+             elsif ( $format =~ /\baltTARGET\b/ ) {
+#                 unless ( $altid ) {
+#                     print "NOTICE: discarding >$id<".(defined $hits ? " ($hits)" : "")." without altid nor link [$showme l.$.]\n";  # if $options{'verbose'};
+#                     $recill++;
+#                     next lines;
+#                   }
                }
            };
 
@@ -440,9 +517,24 @@ XxX
 }
 
 
-=head3 processbeaconheader()
+=head3 processbeaconheader($self, $fieldref, [ %options] )
 
 Internal subroutine used by loadFile.
+
+=over 8
+
+=item $fieldref
+
+Hash with raw fields.
+
+=item Supported options: 
+
+ verbose => (0|1)
+
+Show seqnos of old instances which are met by the alias
+
+=back
+
 
 =cut
 
@@ -670,7 +762,7 @@ XxX
   my @oval = map { hEncode($_, $key) } map { (defined $_->[0]) ? ($_->[0]) : () } @$tmpval;
   my $rows = scalar @oval;
 
-  if ( $value ) {                # set
+  if ( (defined $value) and ($value ne "") ) {                # set
       my $usql = <<"XxX";
 UPDATE OR FAIL repos SET $dbkey=? $cond;
 XxX
@@ -686,7 +778,7 @@ XxX
       $rows = $dsth->execute(undef, @cval) or croak("Could not execute $dsql:".$dsth->errstr);
     }
   else {                         # read
-    }
+   }
 
   return ($rows, @oval);
 }
@@ -694,13 +786,25 @@ XxX
 
 
 my ($lwpcarp817, $lwpcarp827);
+
 =head3 update ($sq_or_alias, $params, %options)
+
+Loads a beacon file into the database, possibly replacing a previous instance.
+
+Some magic is employed to autoconvert ISO-8859-1 or doubly UTF-8 encoded files
+back to UTF-8.
+
+Returns undef, if something goes wrong, or the file was not modified since,
+otherwise returns a pair (new seqence number, number of lines imported).
+
 
 =over 8
 
+
 =item $sq_or_alias
 
-Sequence number or alias: Used to determine an existing instance
+Sequence number or alias: Used to determine an existing instance.
+
 
 =item $params
 
@@ -746,10 +850,15 @@ Typical use is with an alias, not with a sequence number:
 
  $db->update('whatever');
 
+Can be used to initially load beacon files from URIs:
+
+ $db->update("new_alias", {_uri => $file_uri} );
+
 =cut
 
 sub update {
   my ($self, $sq_or_alias, $params, %options) = @_;
+  $params = {} unless $params;
   $options{'verbose'} = $self->{'verbose'} unless exists $options{'verbose'};
 
   my $ua = $params->{'agent'};
@@ -769,8 +878,9 @@ SELECT seqno, uri, alias, $feedname, ftime, mtime FROM repos $cond;
 XxX
   my $ssth = $self->{dbh}->prepare($ssql) or croak("Could not prepare $ssql: ".$self->{dbh}->errstr);
   $ssth->execute(@cval) or croak("Could not execute $ssql: ".$ssth->errstr);
-  my ($osq, $ouri, $oalias, $feed, $fetchtime, $modtime) = $ssth->fetchrow_array;
   croak("Select old instance error: ".$ssth->errstr) if $ssth->err;
+  my $aryref = $ssth->fetchrow_arrayref;
+  my ($osq, $ouri, $oalias, $feed, $fetchtime, $modtime) = $aryref ? @$aryref : ();
 
   my $uri = $params->{'_uri'} || $ouri || $feed;
   croak("Cannot update $sq_or_alias: No URI given and also not to be determined") unless $uri;
@@ -909,6 +1019,12 @@ sub utf_deduplicate {
 
 =head3 listCollections ( [ $seqno_or_alias ] )
 
+Iterates over all Sequences and returns on each call an array of
+
+  Seqno, Alias, Uri, Modification time, Identifier Count and Unique identifier count
+
+Returns undef if done.
+
 =cut
 
 sub listCollections {
@@ -923,15 +1039,38 @@ XxX
       $sth->execute(@cval) or croak("Could not execute $sql: ".$sth->errstr);
       $self->{_iterator_listCollections} = $sth;
     };
-  my @onerow = $self->{_iterator_listCollections}->fetchrow_array;
-  unless ( @onerow ) {
+  my $onerow = $self->{_iterator_listCollections}->fetchrow_arrayref;
+  unless ( $onerow ) {
       croak("Error listing Collections: $self->{_iterator_listCollections}->errstr") if $self->{_iterator_listCollections}->err;
       delete $self->{_iterator_listCollections};
+      return ();
     };
-  return @onerow;
+  return @$onerow;
 }
 
 =head3 headers ( [ $seqno_or_alias ] ) 
+
+Iterates over all 
+
+For each iteration returns two hash references:
+
+=over 8
+
+=item 1
+     all official beacon fields
+
+=item 2
+     all administrative fields (_alias, ...), including two special ones:
+
+=over 8
+
+=item -live_count_id
+
+=item -live_unique_id
+
+=back
+
+=back
 
 =cut
 
@@ -961,6 +1100,7 @@ XxX
   my %meta = ('-live_count_id' => $livecounts[0] || 0, '-live_unique_id' => $livecounts[1] || 0, _seqno => $collno);
   my %result = ();
   while ( my($key, $val) = each %$info ) {
+      next unless defined $val;
       my $pval = hEncode($val, $key);
 
       if ( $key =~ /^bc(\w+)$/ ) {
@@ -972,6 +1112,24 @@ XxX
 }
 
 =head3 unload ( [ $seqno_or_alias, %options ] ) 
+
+Deletes the sequence(s).
+
+=over 8
+
+=item $seqno_or_alias
+
+ numeric sequence number, Alias or SQL pattern.
+
+=item Supported options: 
+
+ force => (0|1)
+
+Needed to purge the complete database ($seqno_or_alias empty) or to purge
+more than one sequence ($seqno_or_alias yields more than one seqno).
+
+=back
+
 
 =cut
 
@@ -1022,6 +1180,25 @@ XxX
 
 =head3 purge ( $seqno_or_alias[, %options ] ) 
 
+Deletes all identifiers from the database to the given pattern, 
+but leaves the stored header information intact, such that it
+can be updated automatically.
+
+=over 8
+
+=item $seqno_or_alias
+
+  Pattern
+
+=item Supported options: 
+
+ force => (0|1)
+
+Allow purging of more than one sequence.
+
+=back
+
+
 =cut
 
 sub purge {
@@ -1066,6 +1243,22 @@ XxX
 
 =head3 idStat ( [ $seqno_or_alias, %options ] ) 
 
+Count identifiers for the given pattern.
+
+=over 8
+
+=item Supported options: 
+
+ distinct => (0|1)
+
+Count multiple occurences only once
+
+ verbose => (0|1)
+
+
+=back
+
+
 =cut
 
 sub idStat {
@@ -1089,11 +1282,27 @@ SELECT COUNT($count_what) FROM beacons $cond;
 XxX
   my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
   $sth->execute() or croak("Could not execute $sql: ".$sth->errstr);
-  my ($hits) = $sth->fetchrow_array || (0);
-  return $hits;
+  my $hits = $sth->fetchrow_arrayref;
+  return $hits->[0] || 0;
 };
 
+
 =head3 idCounts ( [ $seqno_or_alias, %options ] ) 
+
+Iterates through the entries according to the optional id filter expression.
+
+For each iteration the call returns a triple consisting of (identifier,
+number of rows, and sum of all individual counts). 
+
+=over 8
+
+=item Supported options: 
+
+ distinct => (0|1)
+
+Count multiple occurences only once (i.e. always "1"?)
+
+=back
 
 =cut
 
@@ -1109,21 +1318,32 @@ XxX
       $sth->execute() or croak("Could not execute $sql: ".$sth->errstr);
       $self->{_iterator_idCounts} = $sth;
     };
-  my @onerow = $self->{_iterator_idCounts}->fetchrow_array;
-  unless ( @onerow ) {
+  my $onerow = $self->{_iterator_idCounts}->fetchrow_arrayref;
+  unless ( $onerow ) {
       croak("Error listing Collections: $self->{_iterator_idCounts}->errstr") if $self->{_iterator_idCounts}->err;
       delete $self->{_iterator_idCounts};
       return ();
     };
   if ( defined $self->{identifierClass} ) {
       my $c = $self->{identifierClass};
-      $c->hash($onerow[0]);
-      $onerow[0] = $c->can("pretty") ? $c->pretty() : $c->value();
+# compat: hash might not take an argument, must resort to value, has to be cleared before...
+      $c->value("");
+      my $did = $c->hash($onerow->[0]) || $c->value($onerow->[0]);
+      $onerow->[0] = $c->can("pretty") ? $c->pretty() : $c->value();
     };
-  return @onerow;
+  return @$onerow;
 };
 
-=head3 idList ( [ $seqno_or_alias, %options ] ) 
+=head3 idList ( [ $pattern ] ) 
+
+Iterates through the entries according to the optional selection.
+
+For each iteration the call returns a tuple consisting of identifier and an 
+list of array references (Seqno, Hits, Info, explicit Link, AltId) or the emtpy list
+if finished. 
+
+Hits, Info, Link and AltId are normalized to the empty string if undefined (or < 2 for hits).
+
 
 =cut
 
@@ -1132,7 +1352,7 @@ sub idList {
   my $cond = $pattern ? qq!WHERE hash LIKE "$pattern"! : "";
   unless ( $self->{_iterator_idList_handle} ) {
       my ($sql) =<<"XxX";
-SELECT hash, seqno, hits, info, link FROM beacons $cond ORDER BY hash, seqno, altid;
+SELECT hash, seqno, hits, info, link, altid FROM beacons $cond ORDER BY hash, seqno, altid;
 XxX
       my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
       $sth->execute() or croak("Could not execute $sql: ".$sth->errstr);
@@ -1147,10 +1367,16 @@ XxX
     };
   my $pf = $self->{_iterator_idList_prefetch};
   while ( my $onerow = $self->{_iterator_idList_handle}->fetchrow_arrayref ) {
-      $onerow->[2] = "" unless $self->{_iterator_idList_crosscheck}->{$onerow->[1]};  # kill artefacts
+#      $onerow->[2] = "" unless $self->{_iterator_idList_crosscheck}->{$onerow->[1]};  # kill artefacts
+      $onerow->[2] = "" unless $onerow->[2];  # kill artefacts
+      $onerow->[3] = "" unless defined $onerow->[3];  # kill artefacts
+      $onerow->[4] = "" unless defined $onerow->[4];  # kill artefacts
+      $onerow->[5] = "" unless defined $onerow->[5];  # kill artefacts
       if ( defined $self->{identifierClass} ) {
           my $c = $self->{identifierClass};
-          $c->hash($onerow->[0]);
+# compat: hash might not take an argument, must resort to value, has to be cleared before...
+          $c->value("");
+          my $did = $c->hash($onerow->[0]) || $c->value($onerow->[0]);
           $onerow->[0] = $c->can("pretty") ? $c->pretty() : $c->value();
         };
       if ( $pf ) {
@@ -1184,10 +1410,10 @@ Sets the field $field of the OpenSearchDescription to $value.
 sub setOSD {
   my ($self) = shift;
   $self->clearOSD(@_) or return undef;
-  return $self->addOSD(@_);
+  return (defined $_[1]) ? $self->addOSD(@_) : 0;     # value to set
 };
 
-=head3 setOSD ( $field }
+=head3 clearOSD ( $field }
 
 Clears the field $field of the OpenSearchDescription.
 
@@ -1229,12 +1455,14 @@ XxX
 Sets the field $field of the Beacon meta table (used to generate a BEACON file for this
 service) to $value.
 
+
+
 =cut
 
 sub setBeaconMeta {
   my ($self) = shift;
   $self->clearBeaconMeta(@_) or return undef;
-  return $self->addBeaconMeta(@_) if defined $_[1];        # value to set
+  return (defined $_[1]) ? $self->addBeaconMeta(@_) : 0;     # value to set
 };
 
 =head3 clearBeaconMeta ( $field }
@@ -1244,9 +1472,9 @@ Deletes the field $field of the Beacon meta table.
 =cut
 
 sub clearBeaconMeta {
-  my ($self, $field) = @_;
-  $field || (carp("no Beacon field name provided"), return undef);
-  $field = $self->beaconfields($field) or (carp("no valid Beacon field '$field'"), return undef);
+  my ($self, $rfield) = @_;
+  $rfield || (carp("no Beacon field name provided"), return undef);
+  my $field = $self->beaconfields($rfield) or (carp("no valid Beacon field '$rfield'"), return undef);
   my $sql = <<"XxX";
 DELETE FROM osd WHERE key=?;
 XxX
@@ -1261,9 +1489,9 @@ Appends $value to the field $field of the BEACON meta table
 
 =cut
 sub addBeaconMeta {
-  my ($self, $field, $value) = @_;
-  $field || (carp("no Beacon field name provided"), return undef);
-  $field = $self->beaconfields($field) or (carp("no valid Beacon field '$field'"), return undef);
+  my ($self, $rfield, $value) = @_;
+  $rfield || (carp("no Beacon field name provided"), return undef);
+  my $field = $self->beaconfields($rfield) or (carp("no valid Beacon field '$rfield'"), return undef);
   my $sql = <<"XxX";
 INSERT INTO osd ( key, val ) VALUES ( ?, ? );
 XxX
@@ -1271,6 +1499,8 @@ XxX
   $sth->execute($field, $value) or croak("Could not execute $sql: ".$sth->errstr);
   return 1;
 }
+
+
 
 # on-the-fly conversions
 

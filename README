@@ -2,6 +2,16 @@ NAME
     SeeAlso::Source::BeaconAggregator - Beacon files as source for
     SeeAlso::Server
 
+    SeeAlso::Source::BeaconAggregator::Maintenance - Administrative
+    tasks for the collection of beacon files
+
+    sasbactrl - Command line interface to the above
+
+    SeeAlso::Source::BeaconAggregator::Publisher - Extended
+    methods (act as a resolver, publish a beacon file for this
+    collection)
+
+
 DESCRIPTION
     This Module allows a collection of BEACON files (cf.
     http://de.wikipedia.org/wiki/Wikipedia:PND/BEACON) to be used as
@@ -19,9 +29,19 @@ DESCRIPTION
     respect to this SeeAlso service is achieved by using
     SeeAlso::Source::BeaconAggregator::Publisher.
 
+TROUBLESHOOTING
+
+    In order to operate with SeeAlso::Identifier::GND 054 you'll have
+    to work around the inconvenience of that module not being completely
+    compliant to the Interface set up by SeeAlso::Identifier.
+    A Q&D fix would be to add the follogwing two lines in your code:
+
+*SeeAlso::Identifier::GND::canonical = \&SeeAlso::Identifier::GND::normalized;
+*SeeAlso::Identifier::GND::hash = \&SeeAlso::Identifier::GND::indexed;
+
 
 AUTHOR
-        Thomas Berger <ThB@gymel.com>
+    Thomas Berger <ThB@gymel.com>
 
 COPYRIGHT
     This program is free software; you can redistribute it and/or modify it

@@ -2,7 +2,7 @@
 
 # t/020_stats_id.t - check dumps and maintenance 
 
-use Test::More tests => 124;
+use Test::More tests => 130;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator::Maintenance' );
@@ -11,12 +11,42 @@ BEGIN {
 
 # open database
 
-my $dsn = "testdb";
+##############################################################
+if ( $SeeAlso::Identifier::GND::VERSION eq "0.54" ) {
+    my $code = <<'XxX';
+#!!! Have to tweak internals of SeeAlso::Identifier::GND for successful operation !!!
+    *SeeAlso::Identifier::GND::canonical = \&SeeAlso::Identifier::GND::normalized;
+    *SeeAlso::Identifier::GND::hash = \&SeeAlso::Identifier::GND::indexed;
+#!!! !!!#
+XxX
+    diag $code;
+    eval $code or die "tweak failed: $@";
+}
+##############################################################
+
+# Test Identifier functions;
 my $idclass = SeeAlso::Identifier::GND->new();
 ok (defined $idclass, "created identifier object");
 isa_ok ($idclass, 'SeeAlso::Identifier::GND');
 isa_ok ($idclass, 'SeeAlso::Identifier');
 
+# set value
+ok($idclass->value("103117741"), "set value");
+# get value
+is($idclass->value(), "103117741", "get value");
+# get string
+is($idclass->as_string(), "http://d-nb.info/gnd/103117741", "get string");
+# stringification
+is("$idclass", "http://d-nb.info/gnd/103117741", "stringification");
+# hash
+is($idclass->hash(), "103117741", "value");
+# canonical
+is($idclass->canonical(), "http://d-nb.info/gnd/103117741", "value");
+
+
+# Test beacon functions
+
+my $dsn = "testdb";
 my $use = SeeAlso::Source::BeaconAggregator::Maintenance->new(dsn => $dsn, identifierClass => $idclass);
 ok (defined $use, "accessed db with dsn");
 isa_ok ($use, 'SeeAlso::Source::BeaconAggregator');
@@ -76,14 +106,14 @@ is("@cexcess", "", "undelivered identifiers for distinct idCounts");
 # idList
 my %iexpected = (
   '118784226' => {"1:" => ["", "", "", ""], 
-                  "2:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
+                  "3:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
                  },
   '132464462' => {"1:" => [1, "", "", ""]},
   '118624458' => {"1:" => [2, "", "", ""]},
-  '103117741' => {"2:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
-                  "2:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"]
+  '103117741' => {"3:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
+                  "3:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"]
                  },
-  '118559796' => {"2:" =>, ["", "", "", ""]},
+  '118559796' => {"3:" =>, ["", "", "", ""]},
 );
 while ( my (@ilist) = $use->idList() ) {
     ok(@ilist > 1, 'idList gave a tuple');

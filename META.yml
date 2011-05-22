@@ -2,6 +2,8 @@
 abstract: 'Beacon files as source for SeeAlso::Server'
 author:
   - 'Thomas Berger <ThB@gymel.com>'
+build_requires:
+  SeeAlso::Identifier::GND: 0.54
 configure_requires:
   Module::Build: 0.36
 generated_by: 'Module::Build version 0.3613'
@@ -24,6 +26,7 @@ recommends:
   Getopt::Long: 0
   LWP: 5.827
   Pod::Usage: 0
+  SeeAlso::Identifier::GND: 0.55
   SeeAlso::Server: 0.58
 requires:
   CGI: 3.0
@@ -34,8 +37,9 @@ requires:
   HTTP::Date: 5.0
   HTTP::Request: 5.0
   SeeAlso::Identifier: 0.46
-  SeeAlso::Identifier::GND: 0.54
+  SeeAlso::Response: 0.54
   SeeAlso::Server: 0.57
+  SeeAlso::Source: 0.56
   perl: v5.8.2
 resources:
   license: http://dev.perl.org/licenses/

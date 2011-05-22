@@ -37,6 +37,7 @@
 # Tempfiles
 ^pod2htmd.tmp
 ^pod2htmi.tmp
+^beacon.out
 
 # Avoid configuration metadata file
 ^MYMETA\.

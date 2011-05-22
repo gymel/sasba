@@ -2,7 +2,7 @@
 
 # t/020_stats_id.t - check dumps and maintenance 
 
-use Test::More tests => 124;
+use Test::More tests => 125;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator::Maintenance' );
@@ -11,7 +11,7 @@ BEGIN {
 
 # open database
 
-SKIP {
+SKIP: {
   eval { require SeeAlso::Identifier::PND };
   skip "SeeAlso::Identifier::PND is not installed", 122 if $@;
 
@@ -81,14 +81,14 @@ is("@cexcess", "", "undelivered identifiers for distinct idCounts");
 # idList
 my %iexpected = (
   '118784226' => {"1:" => ["", "", "", ""], 
-                  "2:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
+                  "3:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
                  },
   '132464462' => {"1:" => [1, "", "", ""]},
   '118624458' => {"1:" => [2, "", "", ""]},
-  '103117741' => {"2:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
-                  "2:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"]
+  '103117741' => {"3:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
+                  "3:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"]
                  },
-  '118559796' => {"2:" =>, ["", "", "", ""]},
+  '118559796' => {"3:" =>, ["", "", "", ""]},
 );
 while ( my (@ilist) = $use->idList() ) {
     ok(@ilist > 1, 'idList gave a tuple');

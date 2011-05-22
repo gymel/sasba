@@ -13,11 +13,13 @@ WriteMakefile
           'PREREQ_PM' => {
                            'SeeAlso::Identifier::GND' => '0.54',
                            'DBD::SQLite' => '1.25',
+                           'SeeAlso::Source' => '0.56',
                            'CGI' => '3.0',
                            'SeeAlso::Identifier' => '0.46',
                            'HTTP::Date' => '5.0',
                            'Carp' => 0,
                            'SeeAlso::Server' => '0.57',
+                           'SeeAlso::Response' => '0.54',
                            'File::Temp' => 0,
                            'HTTP::Request' => '5.0',
                            'DBI' => '1.6'
