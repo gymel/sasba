@@ -26,7 +26,6 @@ subtest "deflate" => sub {
 
 my $file_uri;
 ok($file_uri = ($use->headerfield('bar', '_uri'))[1], 'get file uri');
-warn $file_uri;
 
 subtest "purge" => sub {
 	plan tests => 15;

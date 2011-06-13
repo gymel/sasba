@@ -19,6 +19,7 @@ WriteMakefile
                            'HTTP::Date' => '5.0',
                            'Carp' => 0,
                            'Test::More' => '0.90',
+                           'LWP::UserAgent' => '5.0',
                            'SeeAlso::Server' => '0.57',
                            'SeeAlso::Response' => '0.54',
                            'File::Temp' => 0,

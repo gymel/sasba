@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2';
+    $VERSION     = '0.2_51';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -17,6 +17,7 @@ use base ("SeeAlso::Source::BeaconAggregator");
 use Carp;
 use HTTP::Date;     # not perfect, but the module is commonly installed...
 use HTTP::Request;
+use LWP::UserAgent;
 use File::Temp;
 
 =head1 NAME
@@ -875,7 +876,7 @@ sub update {
       $ua = LWP::UserAgent->new(agent => "SA-S-BeaconAggregator ",      # end with space to get default agent appended
                             env_proxy => 1,
                               timeout => 300,
-                               );
+                               ) or croak("cannot create UserAgent");
     };
 
   my ($cond, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($sq_or_alias);

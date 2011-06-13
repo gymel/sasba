@@ -10,6 +10,7 @@ my $build = Module::Build->new(
 			   CGI	=> '3.0',
 		    HTTP::Date	=> '5.0',
 		 HTTP::Request	=> '5.0',
+		LWP::UserAgent	=> '5.0',
 			   DBI	=> '1.6',
 		   DBD::SQLite	=> '1.25',
 	       SeeAlso::Server	=> '0.57',
@@ -17,17 +18,23 @@ my $build = Module::Build->new(
 	     SeeAlso::Response	=> '0.54',
 	   SeeAlso::Identifier	=> '0.46',
 		},
+	build_requires => {
+      SeeAlso::Identifier::GND	=> '0.54',
+	      Test::More	=> '0.90',
+		},
+#	configure_requires => {
+#		},
 	recommends => {
 			   LWP	=> '5.827',
 		  Getopt::Long	=> 0,
 		    Pod::Usage	=> 0,
 	       SeeAlso::Server	=> '0.58',
       SeeAlso::Identifier::GND	=> '0.55',
+      SeeAlso::Identifier::PND	=> '0.57',
 		},
-	build_requires => {
-      SeeAlso::Identifier::GND	=> '0.54',
-	      Test::More	=> '0.90',
-		},
+#	script_files => [
+#	'bin/sasbactrl',
+#		],
 	license => 'perl',
 	create_makefile_pl => 'traditional',
     );

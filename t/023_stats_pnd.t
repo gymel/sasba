@@ -6,14 +6,14 @@ use Test::More tests => 125;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator::Maintenance' );
-  use_ok( 'SeeAlso::Identifier::PND' );
+  use_ok( 'SeeAlso::Identifier::GND' );
 }
 
 # open database
 
 SKIP: {
   eval { require SeeAlso::Identifier::PND };
-  skip "SeeAlso::Identifier::PND is not installed", 122 if $@;
+  skip "SeeAlso::Identifier::PND is not installed", 123 if $@;
 
 my $dsn = "testdb";
 my $idclass = SeeAlso::Identifier::PND->new();
