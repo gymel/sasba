@@ -3,6 +3,7 @@ abstract: 'Beacon files as source for SeeAlso::Server'
 author:
   - 'Thomas Berger <ThB@gymel.com>'
 build_requires:
+  Cwd: 3.0
   SeeAlso::Identifier::GND: 0.54
   Test::More: 0.90
 configure_requires:
@@ -16,10 +17,10 @@ name: SeeAlso-Source-BeaconAggregator
 provides:
   SeeAlso::Source::BeaconAggregator:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
-    version: 0.2_51
+    version: 0.2_52
   SeeAlso::Source::BeaconAggregator::Maintenance:
     file: lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm
-    version: 0.2_51
+    version: 0.2_52
   SeeAlso::Source::BeaconAggregator::Publisher:
     file: lib/SeeAlso/Source/BeaconAggregator/Publisher.pm
     version: 0.2_50
@@ -36,9 +37,9 @@ requires:
   DBD::SQLite: 1.25
   DBI: 1.57
   File::Temp: 0
-  HTTP::Date: 1.47
+  HTTP::Date: 1.46
   HTTP::Request: 1.40
-  LWP::UserAgent: 5.0
+  LWP::UserAgent: 2.031
   SeeAlso::Identifier: 0.46
   SeeAlso::Response: 0.54
   SeeAlso::Server: 0.57
@@ -46,4 +47,4 @@ requires:
   perl: v5.8.2
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.2_51
+version: 0.2_52

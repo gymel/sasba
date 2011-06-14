@@ -11,20 +11,21 @@ WriteMakefile
                          ],
           'VERSION_FROM' => 'lib/SeeAlso/Source/BeaconAggregator.pm',
           'PREREQ_PM' => {
-                           'SeeAlso::Identifier::GND' => '0.54',
                            'DBD::SQLite' => '1.25',
-                           'SeeAlso::Source' => '0.56',
                            'CGI' => '3.0',
                            'SeeAlso::Identifier' => '0.46',
-                           'HTTP::Date' => '1.47',
+                           'SeeAlso::Response' => '0.54',
+                           'DBI' => '1.57',
+                           'SeeAlso::Identifier::GND' => '0.54',
+                           'SeeAlso::Source' => '0.56',
+                           'HTTP::Date' => '1.46',
                            'Carp' => 0,
                            'Test::More' => '0.90',
-                           'LWP::UserAgent' => '5.0',
+                           'LWP::UserAgent' => '2.031',
                            'SeeAlso::Server' => '0.57',
-                           'SeeAlso::Response' => '0.54',
                            'File::Temp' => 0,
                            'HTTP::Request' => '1.40',
-                           'DBI' => '1.57'
+                           'Cwd' => '3.0'
                          }
         )
 ;
