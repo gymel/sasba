@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_51';
+    $VERSION     = '0.2_52';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -204,12 +204,6 @@ XxX
   $hdl->do("CREATE UNIQUE INDEX IF NOT EXISTS seqnos ON repos(seqno);") or croak("Setup error: ".$hdl->errstr);
   $hdl->do("CREATE INDEX IF NOT EXISTS aliases ON repos(alias);") or croak("Setup error: ".$hdl->errstr);
 
-  my ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("COUNT");
-# $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
-
-  ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("REMARK");
-#  $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
-
   $hdl->do(<<"XxX"
 CREATE TABLE IF NOT EXISTS beacons (
     hash CHARACTER(64) NOT NULL,
@@ -246,8 +240,45 @@ CREATE TABLE IF NOT EXISTS osd (
 );
 XxX
     ) or croak("Setup error: ".$hdl->errstr);
-
   $hdl->do("CREATE INDEX IF NOT EXISTS OSDKeys ON osd(key);") or croak("Setup error: ".$hdl->errstr);
+
+# Admin Stuff
+  $hdl->do(<<"XxX"
+CREATE TABLE IF NOT EXISTS admin (
+    key CHAR(20) PRIMARY KEY NOT NULL,
+    val VARCHAR(1024)
+);
+XxX
+    ) or croak("Setup error: ".$hdl->errstr);
+
+  $hdl->do("CREATE UNIQUE INDEX IF NOT EXISTS ADMKeys ON admin(key);") or croak("Setup error: ".$hdl->errstr);
+
+  my $verkey = "DATA_VERSION";
+  my $goalver = $SeeAlso::Source::BeaconAggregator::DATA_VERSION;
+  my $verh = $hdl->prepare("SELECT val FROM admin WHERE key==?;")
+          or croak("Could not prepare statement (get version)".$hdl->errstr);
+  $verh->execute($verkey) or croak("Could not execute statement (get version): ".$verh->errstr);
+  my $verref = $verh->fetchrow_arrayref;
+  my $dbver = ($verref ? $verref->[0] : 0) || 0;
+  if ( $dbver && ($dbver != $goalver) ) {
+      print "NOTICE: Database version $dbver: Upgrading to $goalver\n";
+    # alter tables here
+      if ( $dbver < 2 ) {
+        #  my ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("COUNT");
+        # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
+        # ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("REMARK");
+        # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
+        };
+    }
+  elsif ( $self->{'verbose'} ) {
+      print "INFO: Database version $dbver is current\n"};
+
+  unless ( $dbver == $goalver) {
+      $verh = $hdl->prepare("INSERT OR REPLACE INTO admin VALUES (?, ?);")
+              or croak("Could not prepare update version statement ".$hdl->errstr);
+      $verh->execute($verkey, $goalver)
+              or croak("Could not execute update version statement: ".$verh->errstr);
+    };
 
   $hdl->do("ANALYZE;");
 
@@ -896,6 +927,7 @@ XxX
   $uri =~ s/\s$//;
   $alias ||= $oalias || "";
 
+  print "Requesting $uri\n" if $options{'verbose'};
   my $rq = HTTP::Request->new('GET', $uri) or croak("could not construct request from $uri");
   if ( $fetchtime && $modtime  && !$options{'force'} ) {   # allow force-reload by deleting _ftime or _mtime
       printf("  %-30s %s\n", "Old instance stamped", scalar localtime($modtime)) if $options{'verbose'};
@@ -913,7 +945,6 @@ XxX
   if ( $response->is_success ) {
       print $osq ? "INFO: refreshing $alias sq $osq from $uri\n"
                  : "INFO: importing previously unseen $alias from $uri\n";
-
       my $charset;
       if ( $response->can("content_charset") ) {    # LWP 5.827 and above
           $charset = $response->content_charset;

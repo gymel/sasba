@@ -34,10 +34,10 @@ requires:
   CGI: 3.0
   Carp: 0
   DBD::SQLite: 1.25
-  DBI: 1.6
+  DBI: 1.57
   File::Temp: 0
-  HTTP::Date: 5.0
-  HTTP::Request: 5.0
+  HTTP::Date: 1.47
+  HTTP::Request: 1.40
   LWP::UserAgent: 5.0
   SeeAlso::Identifier: 0.46
   SeeAlso::Response: 0.54

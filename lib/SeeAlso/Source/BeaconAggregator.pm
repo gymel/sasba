@@ -5,13 +5,16 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_51';
+    $VERSION     = '0.2_52';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
     @EXPORT_OK   = qw();
     %EXPORT_TAGS = ();
 }
+
+use vars qw($DATA_VERSION);
+$DATA_VERSION = 1;
 
 use SeeAlso::Response;
 use base ("SeeAlso::Source");
@@ -615,7 +618,7 @@ Returns a hashref
    response => Number of beacon files matching "/" Sum of individual hit counts
  }
 
-for the $offset'th identifier with at least $goal hits.
+for the C<$offset>'th identifier occuring in at least C<$goal> beacon instances.
 
 $sth will be initialized by a statement handle to pass to subsequent calls if
 defined but false.

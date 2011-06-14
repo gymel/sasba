@@ -18,7 +18,7 @@ my $dsn = "pnd-aks";
 my ($distinct, $force, $quiet, $dbfile, $itype);
 
 #  Application constants
-our $EXAMPLEGOAL = 20;      # don't try to find examples with higher hit count
+our $EXAMPLEGOAL = 30;      # don't try to find examples with higher hit count
 
 our $RETRYWAIT = 250*60;            # w/o #REVISIT hint: never attempt more often (4h 10')
 our $NOREVISITWAIT = 1400*60;       # w/o #REVISIT hint: never revisit sooner (23h20')
@@ -792,6 +792,8 @@ sub refreshOSD {    #
         return 1;
       };
 
+    return 1 unless $repcnt;     # no repositories => no examples
+
     print " ... Examples from Sources" if $verbose;
     $db->clearOSD("Examples");
     my $explref = $db->RepoCols("EXAMPLES");
@@ -803,8 +805,8 @@ sub refreshOSD {    #
       };
 
     print " ... Examples by coincidence" if $verbose;
-    my $k = $repcnt;
-    $k = $EXAMPLEGOAL if $k > $EXAMPLEGOAL;
+    my $k = sprintf("%.0f", exp(log($repcnt)*4/5));  # 4 out of 5, 23 out of 50, 40 out of 100
+    $k = $EXAMPLEGOAL if $EXAMPLEGOAL and ($k > $EXAMPLEGOAL);
     my ($i, $idnref);
     my $j = 0;
     my $sthcache = "";
