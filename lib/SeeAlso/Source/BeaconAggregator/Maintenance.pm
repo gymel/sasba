@@ -51,13 +51,13 @@ access an existing database or create a new one.
 
 =head2 Database Methods
 
-=head3 init()
+=head3 init( [ %options] )
 
 Sets up and initializes the database structure for the object.
 This has to be done once after creating a new database and after
 upgrading this module.
 
-The C<repos> table contains as columns all valid beacon fields plus 
+The I<repos> table contains as columns all valid beacon fields plus 
 the following administrative fields which have to be prefixed with 
 "_" in the interface:
 
@@ -131,7 +131,7 @@ Just to store some remarks.
 
 =back
 
-The C<beacons> table stores the individual beacon entries from the input files.
+The I<beacons> table stores the individual beacon entries from the input files.
 Its columns are:
 
 =over 8
@@ -165,16 +165,32 @@ Its columns are:
 =back
 
 
-The C<osd> table contains C<key>, C<val> pairs for various metadata 
+The I<osd> table contains C<key>, C<val> pairs for various metadata 
 concerning the collection as such, notably the values needed for
 the Open Search Description and the Header fields needed in case
 of publishing a beacon file for this collection.
+
+The I<osd> admin table stores (unique) C<key>, C<val> pairs for 
+general persistent data. Currently the following keys are defined:
+
+=over 8
+
+=item DATA_VERSION
+
+Integer version number to migrate database layout.
+
+=item IDENTIFIER_CLASS
+
+Name of the Identifier class to be used.
+
+=back
 
 
 =cut
 
 sub init {
-  my ($self) = @_;
+  my ($self, %options) = @_;
+  $options{'verbose'} = $self->{'verbose'} unless exists $options{'verbose'};
 
   my @fieldlist = SeeAlso::Source::BeaconAggregator->beaconfields();
   my @bf = map{ join(" ", @{[SeeAlso::Source::BeaconAggregator->beaconfields($_)]}[0..1]) } @fieldlist;
@@ -253,13 +269,11 @@ XxX
 
   $hdl->do("CREATE UNIQUE INDEX IF NOT EXISTS ADMKeys ON admin(key);") or croak("Setup error: ".$hdl->errstr);
 
+  my $admref = $self->admhash();
+
   my $verkey = "DATA_VERSION";
   my $goalver = $SeeAlso::Source::BeaconAggregator::DATA_VERSION;
-  my $verh = $hdl->prepare("SELECT val FROM admin WHERE key==?;")
-          or croak("Could not prepare statement (get version)".$hdl->errstr);
-  $verh->execute($verkey) or croak("Could not execute statement (get version): ".$verh->errstr);
-  my $verref = $verh->fetchrow_arrayref;
-  my $dbver = ($verref ? $verref->[0] : 0) || 0;
+  my $dbver = $admref->{$verkey} || 0;
   if ( $dbver && ($dbver != $goalver) ) {
       print "NOTICE: Database version $dbver: Upgrading to $goalver\n";
     # alter tables here
@@ -270,14 +284,45 @@ XxX
         # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
         };
     }
-  elsif ( $self->{'verbose'} ) {
+  elsif ( $options{'verbose'} ) {
       print "INFO: Database version $dbver is current\n"};
 
   unless ( $dbver == $goalver) {
-      $verh = $hdl->prepare("INSERT OR REPLACE INTO admin VALUES (?, ?);")
+      my $verh = $hdl->prepare("INSERT OR REPLACE INTO admin VALUES (?, ?);")
               or croak("Could not prepare update version statement ".$hdl->errstr);
       $verh->execute($verkey, $goalver)
               or croak("Could not execute update version statement: ".$verh->errstr);
+    };
+
+  unless ( exists $options{'identifierClass'} ) {
+      $options{'identifierClass'} = $self->{'identifierClass'} if exists $self->{'identifierClass'};
+    };
+
+  my $ickey = "IDENTIFIER_CLASS";
+  if ( (exists $options{identifierClass}) and (my $wanttype = ref($options{identifierClass})) ) {
+      if ( (exists $self->{identifierClass}) && (ref($self->{identifierClass}) ne $wanttype) ) {
+          croak("Cannot override identifierClass set on new()")};
+      if ( my $oldtype = $admref->{$ickey} ) {
+          croak ("Identifier mismatch: Cannot set to $wanttype since database already branded to $oldtype")
+              unless($oldtype eq $wanttype);
+        }
+      else {
+          warn "fixing identifierClass as $wanttype in admin table\n" if $options{'verbose'};
+          print "fixing identifierClass as $wanttype" if $options{'verbose'};
+          my $ich = $hdl->prepare("INSERT INTO admin VALUES (?, ?);")
+                or croak("Could not prepare fix identifier class statement ".$hdl->errstr);
+          $ich->execute($ickey, $wanttype)
+                or croak("Could not execute fix identifier class statement: ".$ich->errstr);
+          $self->{identifierClass} = $options{identifierClass};
+        };
+    }
+  elsif ( (exists $options{identifierClass}) and (not $options{identifierClass}) ) {
+      print "removing fixed identifierClass from admin table\n" if $options{'verbose'};
+      my $ich = $hdl->prepare("DELETE FROM admin WHERE key=?;")
+            or croak("Could not prepare remove identifier class statement ".$hdl->errstr);
+      $ich->execute($ickey)
+            or croak("Could not execute remove identifier class statement: ".$ich->errstr);
+      delete $self->{identifierClass};
     };
 
   $hdl->do("ANALYZE;");
@@ -363,6 +408,22 @@ sub loadFile {
       print "ERROR: no such file $file\n";
       return undef;
     }
+
+  unless ( defined $self->{identifierClass} ) {
+      my $admref = $self->admhash();
+      if ( my $package = $admref->{"IDENTIFIER_CLASS"} ) {
+          print "Assuming identifiers of type $package\n" if $options{'verbose'};
+          eval {
+              (my $pkgpath = $package) =~ s=::=/=g;  # require needs path...
+              require "$pkgpath.pm";
+              import $package;
+            };
+          if ( $@ ) {
+             croak "sorry: Identifier Class $package cannot be imported\n$@"};
+          $self->{identifierClass} = $package->new();
+        };
+    }
+
   my $mtime = (stat(_))[9];
   open(BKN, "<:utf8", $file) or (print "ERROR: cannot read $file\n", return undef);
 
@@ -487,7 +548,7 @@ sub loadFile {
          $hits = 0 if $hits eq "";
          $altid ||= "";
          my $hash;
-         if ( exists $self->{identifierClass} ) {
+         if ( defined $self->{identifierClass} ) {
              $self->{identifierClass}->value($id);
              unless ( $self->{identifierClass}->valid ) {
                  print "NOTICE: invalid identifier >$id< ($hits) [$showme l.$.]\n" if $options{'verbose'};
@@ -998,6 +1059,8 @@ XxX
         };
       print $tmpfh $$contref;
       close($tmpfh);
+      # early cleanup since everything might be huge....
+      $contref = $response = undef;
 
       my ($collno, $count, $statref) = $self->loadFile($tmpfile, {_alias => $alias, _uri => $uri, _ruri => $nuri, _mtime => $lm}, %options);
       if ( ! $collno && $osq ) {

@@ -311,6 +311,7 @@ sub new {
           });
   return undef unless $dbh;
   $self->{dbh} = $dbh;
+
   return $self;
 }
 
@@ -608,6 +609,29 @@ XxX
   return undef unless %result;
   return \%result;
 }
+
+=head3 admhash ( ) 
+
+Returns a hashref with the contents of the admin table (readonly, not tied).
+
+=cut
+
+sub admhash {
+  my $self = shift;
+
+  my $admh = $self->{dbh}->prepare("SELECT key, val FROM admin;")
+          or croak("Could not prepare statement (dump admin table)".$self->{dbh}->errstr);
+  $admh->execute() or croak("Could not execute statement (dump admin table): ".$admh->errstr);
+  my %adm = ();
+  while ( my $onerow = $admh->fetchrow_arrayref() ) {
+      if ( $admh->err ) {
+          croak("Could not iterate through admin table: ".$admh->errstr)};
+      my ($key, $val) = @$onerow;
+      $adm{$key} = $val || "";
+    };
+  return \%adm;
+}
+
 
 
 =head3 findExample ( $goal, $offset, [ $sth ])
