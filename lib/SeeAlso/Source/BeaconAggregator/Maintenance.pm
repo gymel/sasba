@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_52';
+    $VERSION     = '0.2_53';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -233,10 +233,13 @@ XxX
     ) or croak("Setup error: ".$hdl->errstr);
 
 
-# Faciliate lookups
-  $hdl->do("CREATE INDEX IF NOT EXISTS ref ON beacons(hash);") or croak("Setup error: ".$hdl->errstr);
 # enforce constraints
   $hdl->do("CREATE UNIQUE INDEX IF NOT EXISTS hshrepalt ON beacons(hash, seqno, altid);") or croak("Setup error: ".$hdl->errstr);
+# Faciliate lookups
+# $hdl->do("CREATE INDEX IF NOT EXISTS ref ON beacons(hash);") or croak("Setup error: ".$hdl->errstr);
+  $hdl->do("DROP INDEX IF EXISTS ref;") or croak("Setup error: ".$hdl->errstr);
+# maintenance
+  $hdl->do("CREATE INDEX IF NOT EXISTS maintenance ON beacons(seqno);") or croak("Setup error: ".$hdl->errstr);
 
 # foreign key on cascade does not work?
 
@@ -283,13 +286,14 @@ XxX
         # ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("REMARK");
         # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
         };
+
+      $hdl->do("ANALYZE;");   # recommended after structure changes
     }
   elsif ( $options{'verbose'} ) {
       print "INFO: Database version $dbver is current\n"};
 
   unless ( $dbver == $goalver) {
-      my $verh = $hdl->prepare("INSERT OR REPLACE INTO admin VALUES (?, ?);")
-              or croak("Could not prepare update version statement ".$hdl->errstr);
+      my $verh = $self->stmtHdl("INSERT OR REPLACE INTO admin VALUES (?, ?);", "update version statement");
       $verh->execute($verkey, $goalver)
               or croak("Could not execute update version statement: ".$verh->errstr);
     };
@@ -309,8 +313,7 @@ XxX
       else {
           warn "fixing identifierClass as $wanttype in admin table\n" if $options{'verbose'};
           print "fixing identifierClass as $wanttype" if $options{'verbose'};
-          my $ich = $hdl->prepare("INSERT INTO admin VALUES (?, ?);")
-                or croak("Could not prepare fix identifier class statement ".$hdl->errstr);
+          my $ich = $self->stmtHdl("INSERT INTO admin VALUES (?, ?);", "fix identifier class statement");
           $ich->execute($ickey, $wanttype)
                 or croak("Could not execute fix identifier class statement: ".$ich->errstr);
           $self->{identifierClass} = $options{identifierClass};
@@ -318,14 +321,11 @@ XxX
     }
   elsif ( (exists $options{identifierClass}) and (not $options{identifierClass}) ) {
       print "removing fixed identifierClass from admin table\n" if $options{'verbose'};
-      my $ich = $hdl->prepare("DELETE FROM admin WHERE key=?;")
-            or croak("Could not prepare remove identifier class statement ".$hdl->errstr);
+      my $ich = $self->stmtHdl("DELETE FROM admin WHERE key=?;", "identifier class statement");
       $ich->execute($ickey)
             or croak("Could not execute remove identifier class statement: ".$ich->errstr);
       delete $self->{identifierClass};
     };
-
-  $hdl->do("ANALYZE;");
 
   return 1;    # o.k.
 };
@@ -594,7 +594,7 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
            }
          else {
              croak("Could not insert: ($id, $hits, $info, $link): ".$inserthandle->errstr)};
-         unless ( ++$reccount % 10000 ) {
+         unless ( ++$reccount % 5000 ) {
              $self->{dbh}->{AutoCommit} = 1;
              print "$reccount\n" if $options{'verbose'};
              $self->{dbh}->{AutoCommit} = 0;
@@ -625,9 +625,8 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
   if ( $autopurge ) {
       $self->{dbh}->{AutoCommit} = 0;
       if ( $oseq ) {
-          my $bcdelsql = "DELETE FROM beacons WHERE seqno==?";
-          my $bcdelh = $self->{dbh}->prepare($bcdelsql) or croak("Could not prepare $bcdelsql: ".$self->{dbh}->errstr);
-          my $rows = $bcdelh->execute($oseq) or croak("Could not execute $bcdelsql: ".$bcdelh->errstr);
+          my $bcdelh = $self->stmtHdl("DELETE FROM beacons WHERE seqno==?");
+          my $rows = $bcdelh->execute($oseq) or croak("Could not execute >".$bcdelh->{Statement}."<: ".$bcdelh->errstr);
           $self->{dbh}->{AutoCommit} = 1;
           printf("INFO: Purged %s surplus identifiers from old sequence %u\n", $rows, $oseq) if $options{'verbose'};
           $rows = "0" if $rows eq "0E0";
@@ -635,9 +634,8 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
         };
 
       $self->{dbh}->{AutoCommit} = 0;
-      my $rpdelsql = "DELETE FROM repos WHERE (alias=?) AND (seqno<?);";
-      my $rpdelh = $self->{dbh}->prepare($rpdelsql) or croak("Could not prepare $rpdelsql: ".$self->{dbh}->errstr);
-      my $rows = $rpdelh->execute($autopurge, $collno) or croak("Could not execute $rpdelsql: ".$rpdelh->errstr);
+      my $rpdelh = $self->stmtHdl("DELETE FROM repos WHERE (alias=?) AND (seqno<?);");
+      my $rows = $rpdelh->execute($autopurge, $collno) or croak("Could not execute >".$rpdelh->{Statement}."<: ".$rpdelh->errstr);
       $self->{dbh}->{AutoCommit} = 1;
       $rows = "0" if $rows eq "0E0";
       printf("INFO: %u old sequences discarded\n", $rows) if $options{'verbose'};
@@ -651,17 +649,27 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
 
   my $recok = $recupd + $recnew;
 
-  my @count = $self->{dbh}->selectrow_array("SELECT COUNT(*), COUNT(DISTINCT hash) FROM beacons WHERE seqno==$collno")
-      or croak("Could not count for $collno: ".$self->{dbh}->errstr);
-  printf("WARNING: expected %u valid records, counted %u\n", $recok, $count[0]) if $recok != $count[0];
+  my $ct1hdl = $self->stmtHdl("SELECT COUNT(*) FROM beacons WHERE seqno==?");
+  $ct1hdl->execute($collno) or croak("could not execute live count: ".$ct1hdl->errstr);
+  my $ct1ref = $ct1hdl->fetchrow_arrayref();
+  my $counti = $ct1ref->[0] || 0;
 
-  my $updsql =<<"XxX";
+# my $ct2hdl = $self->stmtHdl("SELECT COUNT(DISTINCT hash) FROM beacons WHERE seqno==?");
+  my $ct2hdl = $self->stmtHdl("SELECT COUNT(1) FROM (SELECT DISTINCT hash FROM beacons WHERE seqno==?)");
+  $ct2hdl->execute($collno) or croak("could not execute live count: ".$ct2hdl->errstr);
+  my $ct2ref = $ct2hdl->fetchrow_arrayref();
+  my $countu = $ct2ref->[0] || 0;
+
+  printf("WARNING: expected %u valid records, counted %u\n", $recok, $counti) if $recok != $counti;
+
+  my $updh = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET counti=?,countu=?,fstat=?,utime=?,ustat=? WHERE seqno==$collno;
 XxX
-  my $updh = $self->{dbh}->prepare($updsql) or croak("Could not prepare $updsql: ".$self->{dbh}->errstr);
-  $updh->execute($count[0], $count[1], $statline, time(), "successfully loaded") or croak("Could not execute $updsql: ".$updh->errstr);
+  $updh->execute($counti, $countu, $statline, time(), "successfully loaded")
+      or croak("Could not execute >".$updh->{Statement}."<: ".$updh->errstr);
 
   close(BKN);
+  $self->{dbh}->do("ANALYZE;");
   return ($collno, $recok, undef);
 }
 
@@ -694,9 +702,8 @@ sub processbeaconheader {
 
   if ( my $alias = $fieldref->{_alias} ) {
       my $stampfield = SeeAlso::Source::BeaconAggregator->beaconfields("TIMESTAMP");
-      my $listsql = "SELECT seqno, $stampfield, mtime, counti FROM repos WHERE alias=?;";
-      my $listh = $self->{dbh}->prepare($listsql) or croak("Could not prepare $listsql: ".$self->{dbh}->errstr);
-      $listh->execute($alias) or croak("Could not execute $listsql: ".$listh->errstr);
+      my $listh = $self->stmtHdl("SELECT seqno, $stampfield, mtime, counti FROM repos WHERE alias=?;");
+      $listh->execute($alias) or croak("Could not execute >".$listh->{Statement}."<: ".$listh->errstr);
       while ( my($row) = $listh->fetchrow_arrayref ) {
           last unless defined $row;
           if ( $options{'verbose'} ) {
@@ -862,24 +869,21 @@ sub processbeaconheader {
       push(@fd, $myval);
     };
   local($") = ",\n";
-  my $sql =<<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 INSERT INTO repos ( seqno, @fn ) VALUES ( NULL, @fd );
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute() or croak("Could not execute $sql:".$sth->errstr);
+  $sth->execute() or croak("Could not execute >".$sth->{Statement}."<:".$sth->errstr);
   my $collno = $self->{dbh}->last_insert_id("", "", "", "");
 
   my $rhandle;
   if ( $osq ) {
-      my $replace =<<"XxX";
+      $rhandle = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL beacons SET seqno=$collno, hits=?, info=?, link=? WHERE hash=? AND seqno==$osq AND altid=?;
 XxX
-      $rhandle = $self->{dbh}->prepare($replace) or croak("Could not prepare $replace: ".$self->{dbh}->errstr);
     };
-  my $insert =<<"XxX";
+  my $ihandle = $self->stmtHdl(<<"XxX");
 INSERT OR IGNORE INTO beacons ( hash, seqno, altid, hits, info, link ) VALUES (?, $collno, ?, ?, ?, ?);
 XxX
-  my $ihandle = $self->{dbh}->prepare($insert) or croak("Could not prepare $insert: ".$self->{dbh}->errstr);
   return ($collno, "", $format, $ihandle, $rhandle, $osq);
 }
 
@@ -974,11 +978,10 @@ sub update {
   my ($cond, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($sq_or_alias);
   my $alias = ($sq_or_alias =~ /^\d+$/) ? "" : $sq_or_alias;
   my $feedname = SeeAlso::Source::BeaconAggregator->beaconfields("FEED");
-  my $ssql = <<"XxX";
+  my $ssth = $self->stmtHdl(<<"XxX");
 SELECT seqno, uri, alias, $feedname, ftime, mtime FROM repos $cond;
 XxX
-  my $ssth = $self->{dbh}->prepare($ssql) or croak("Could not prepare $ssql: ".$self->{dbh}->errstr);
-  $ssth->execute(@cval) or croak("Could not execute $ssql: ".$ssth->errstr);
+  $ssth->execute(@cval) or croak("Could not execute >".$ssth->{Statement}."<: ".$ssth->errstr);
   croak("Select old instance error: ".$ssth->errstr) if $ssth->err;
   my $aryref = $ssth->fetchrow_arrayref;
   my ($osq, $ouri, $oalias, $feed, $fetchtime, $modtime) = $aryref ? @$aryref : ();
@@ -1064,11 +1067,11 @@ XxX
 
       my ($collno, $count, $statref) = $self->loadFile($tmpfile, {_alias => $alias, _uri => $uri, _ruri => $nuri, _mtime => $lm}, %options);
       if ( ! $collno && $osq ) {
-          my $usql = <<"XxX";
+          my $usth = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET utime=?,ustat=? WHERE seqno==$osq;
 XxX
-          my $usth = $self->{dbh}->prepare($usql) or croak("Could not prepare $usql: ".$self->{dbh}->errstr);
-          $usth->execute(time(), $statref ? "load error: $statref" : "internal error") or croak("Could not execute $usql: ".$usth->errstr);
+          $usth->execute(time(), $statref ? "load error: $statref" : "internal error")
+               or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
         };
 
       unlink($tmpfile) if -f $tmpfile;
@@ -1078,22 +1081,22 @@ XxX
       print "INFO: $alias not modified since ".HTTP::Date::time2str($modtime)."\n";
       my $vt = $response->fresh_until(h_min => 1800, h_max => 6 * 86400);
       printf("  %-30s %s\n", "Will not try again before", scalar localtime($vt)) if $options{'verbose'};
-      my $usql = <<"XxX";
+      my $usth = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET utime=?,ustat=?,ruri=? WHERE seqno==$osq;
 XxX
-      my $usth = $self->{dbh}->prepare($usql) or croak("Could not prepare $usql: ".$self->{dbh}->errstr);
-      $usth->execute(time(), $response->status_line, $nuri) or croak("Could not execute $usql: ".$usth->errstr);
+      $usth->execute(time(), $response->status_line, $nuri)
+          or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
       return undef;
     }
   else {
       print "WARNING: No access to $uri for $alias [".$response->status_line."]\n";
       print $response->headers_as_string, "\n";
       return undef unless $osq;
-      my $usql = <<"XxX";
+      my $usth = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET utime=?,ustat=?,ruri=? WHERE seqno==$osq;
 XxX
-      my $usth = $self->{dbh}->prepare($usql) or croak("Could not prepare $usql: ".$self->{dbh}->errstr);
-      $usth->execute(time(), $response->status_line, $nuri) or croak("Could not execute $usql: ".$usth->errstr);
+      $usth->execute(time(), $response->status_line, $nuri)
+          or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
       return undef;
     };
 }
@@ -1166,23 +1169,22 @@ sub unload {
     };
 
   if ( $options{'force'} ) {
-      my ($sql) =<<"XxX";
+      my $sth = $self->stmtHdl(<<"XxX");
 DELETE FROM beacons WHERE seqno==?;
 XxX
-      my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
       foreach my $seqno ( @seqnos ) {
-          my $rows = $sth->execute($seqno_or_alias) or croak("Could not execute $sql: ".$sth->errstr);
+          my $rows = $sth->execute($seqno_or_alias) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
           print "INFO: $rows forced for $seqno\n" if $options{'verbose'};
         };
     };
 
   my ($cond, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($seqno_or_alias);
-  my ($sql) =<<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 DELETE FROM repos $cond;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  my $rows = $sth->execute(@cval) or croak("Could not execute $sql: ".$sth->errstr);
+  my $rows = $sth->execute(@cval) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   $rows = 0 if $rows eq "0E0";
+  $self->{dbh}->do("ANALYZE;");
   return $rows;
 }
 
@@ -1231,22 +1233,22 @@ sub purge {
       carp("Use --force to purge the complete database");
       return 0;
     };
-  my ($sql) =<<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 DELETE FROM beacons WHERE seqno==?;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  my ($usql) =<<"XxX";
+  my $usth = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET counti=?,countu=?,utime=?,ustat=? WHERE seqno==?;
 XxX
-  my $usth = $self->{dbh}->prepare($usql) or croak("Could not prepare $usql: ".$self->{dbh}->errstr);
   my $trows = 0;
   foreach my $seqno ( @seqnos ) {
-      my $rows = $sth->execute($seqno) or croak("Could not execute $sql: ".$sth->errstr);
+      my $rows = $sth->execute($seqno) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $rows = "0" if $rows eq "0E0";
       print "INFO: $rows purged for $seqno\n" if $options{'verbose'};
       $trows += $rows;
-      $usth->execute(0, 0, time, "purged", $seqno) or croak("Could not execute $usql: ".$usth->errstr);
+      $usth->execute(0, 0, time, "purged", $seqno)
+          or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
     };
+  $self->{dbh}->do("ANALYZE;");
   return $trows;
 }
 
@@ -1274,29 +1276,26 @@ sub headerfield {
 
   my ($cond, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($sq_or_alias);
 
-  my $osql = <<"XxX";
+  my $osth = $self->stmtHdl(<<"XxX");
 SELECT $dbkey FROM repos $cond;
 XxX
-  my $osth = $self->{dbh}->prepare($osql) or croak("Could not prepare $osql: ".$self->{dbh}->errstr);
-  $osth->execute(@cval) or croak("Could not execute $osql:".$osth->errstr);
+  $osth->execute(@cval) or croak("Could not execute >".$osth->{Statement}."<:".$osth->errstr);
   my $tmpval = $osth->fetchall_arrayref();
   my @oval = map { hEncode($_, $key) } map { (defined $_->[0]) ? ($_->[0]) : () } @$tmpval;
   my $rows = scalar @oval;
 
   if ( (defined $value) and ($value ne "") ) {                # set
-      my $usql = <<"XxX";
+      my $usth = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET $dbkey=? $cond;
 XxX
       $value = hDecode($value, $key) || "";
-      my $usth = $self->{dbh}->prepare($usql) or croak("Could not prepare $usql: ".$self->{dbh}->errstr);
-      $rows = $usth->execute($value, @cval) or croak("Could not execute $usql:".$usth->errstr);
+      $rows = $usth->execute($value, @cval) or croak("Could not execute >".$usth->{Statement}."<:".$usth->errstr);
     }
   elsif ( defined $value ) {     # clear
-      my $dsql = <<"XxX";
+      my $dsth = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET $dbkey=? $cond;
 XxX
-      my $dsth = $self->{dbh}->prepare($dsql) or croak("Could not prepare $dsql: ".$self->{dbh}->errstr);
-      $rows = $dsth->execute(undef, @cval) or croak("Could not execute $dsql:".$dsth->errstr);
+      $rows = $dsth->execute(undef, @cval) or croak("Could not execute >".$dsth->{Statement}."<:".$dsth->errstr);
     }
   else {                         # read
    }
@@ -1335,11 +1334,10 @@ sub headers {
 
   unless ( $self->{_iterator_info} ) {
       my ($constraint,  @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($seqno_or_alias);
-      my ($sql) =<<"XxX";
+      my $sth = $self->stmtHdl(<<"XxX");
 SELECT * FROM repos $constraint;
 XxX
-      my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-      $sth->execute(@cval) or croak("Could not execute $sql: ".$sth->errstr);
+      $sth->execute(@cval) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $self->{_iterator_info} = $sth;
     };
 
@@ -1351,9 +1349,19 @@ XxX
     }
 
   my $collno = $info->{seqno} || $seqno_or_alias;
-  my @livecounts = $self->{dbh}->selectrow_array("SELECT COUNT(*), COUNT(DISTINCT hash) FROM beacons WHERE seqno==$collno")
-      or croak("Could not count for $collno: ".$self->{dbh}->errstr);
-  my %meta = ('-live_count_id' => $livecounts[0] || 0, '-live_unique_id' => $livecounts[1] || 0, _seqno => $collno);
+
+  my $ct1hdl = $self->stmtHdl("SELECT COUNT(*) FROM beacons WHERE seqno==?");
+  $ct1hdl->execute($collno) or croak("could not execute live count".$ct1hdl->errstr);
+  my $ct1ref = $ct1hdl->fetchrow_arrayref();
+  my $counti = $ct1ref->[0] || 0;
+
+# my $ct2hdl = $self->stmtHdl("SELECT COUNT(DISTINCT hash) FROM beacons WHERE seqno==?");
+  my $ct2hdl = $self->stmtHdl("SELECT COUNT(1) FROM (SELECT DISTINCT hash FROM beacons WHERE seqno==?)");
+  $ct2hdl->execute($collno) or croak("could not execute live count".$ct2hdl->errstr);
+  my $ct2ref = $ct2hdl->fetchrow_arrayref();
+  my $countu = $ct2ref->[0] || 0;
+
+  my %meta = ('-live_count_id' => $counti, '-live_unique_id' => $countu, _seqno => $collno);
   my %result = ();
   while ( my($key, $val) = each %$info ) {
       next unless defined $val;
@@ -1382,11 +1390,10 @@ sub listCollections {
 
   unless ( $self->{_iterator_listCollections} ) {
       my ($constraint, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($seqno_or_alias);
-      my ($sql) =<<"XxX";
+      my $sth = $self->stmtHdl(<<"XxX");
 SELECT seqno, alias, uri, mtime, counti, countu FROM repos $constraint;
 XxX
-      my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-      $sth->execute(@cval) or croak("Could not execute $sql: ".$sth->errstr);
+      $sth->execute(@cval) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $self->{_iterator_listCollections} = $sth;
     };
   my $onerow = $self->{_iterator_listCollections}->fetchrow_arrayref;
@@ -1414,7 +1421,6 @@ Count multiple occurences only once
 
  verbose => (0|1)
 
-
 =back
 
 
@@ -1436,11 +1442,11 @@ sub idStat {
         };
     };
   my $count_what = $options{'distinct'} ? "DISTINCT hash" : "hash";
-  my ($sql) =<<"XxX";
+# will not be optimized by SQLite or mySL: SELECT COUNT($count_what) FROM beacons $cond;
+  my $sth = $self->stmtHdl(<<"XxX");
 SELECT COUNT($count_what) FROM beacons $cond;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute() or croak("Could not execute $sql: ".$sth->errstr);
+  $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   my $hits = $sth->fetchrow_arrayref;
   return $hits->[0] || 0;
 };
@@ -1459,7 +1465,7 @@ number of rows, and sum of all individual counts).
 
  distinct => (0|1)
 
-Count multiple occurences only once (i.e. always "1"?)
+Count multiple occurences in one beacon file only once.
 
 =back
 
@@ -1468,13 +1474,12 @@ Count multiple occurences only once (i.e. always "1"?)
 sub idCounts {
   my ($self, $pattern, %options) = @_;
   my $cond = $pattern ? qq!WHERE hash LIKE "$pattern"! : "";
-  my $count_what = $options{'distinct'} ? "DISTINCT hash" : "hash";
+  my $count_what = $options{'distinct'} ? "DISTINCT seqno" : "seqno";
   unless ( $self->{_iterator_idCounts} ) {
-      my ($sql) =<<"XxX";
+      my $sth = $self->stmtHdl(<<"XxX");
 SELECT hash, COUNT($count_what), SUM(hits) FROM beacons $cond GROUP BY hash ORDER BY hash;
 XxX
-      my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-      $sth->execute() or croak("Could not execute $sql: ".$sth->errstr);
+      $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $self->{_iterator_idCounts} = $sth;
     };
   my $onerow = $self->{_iterator_idCounts}->fetchrow_arrayref;
@@ -1510,11 +1515,10 @@ sub idList {
   my ($self, $pattern) = @_;
   my $cond = $pattern ? qq!WHERE hash LIKE "$pattern"! : "";
   unless ( $self->{_iterator_idList_handle} ) {
-      my ($sql) =<<"XxX";
+      my $sth = $self->stmtHdl(<<"XxX");
 SELECT hash, seqno, hits, info, link, altid FROM beacons $cond ORDER BY hash, seqno, altid;
 XxX
-      my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-      $sth->execute() or croak("Could not execute $sql: ".$sth->errstr);
+      $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $self->{_iterator_idList_handle} = $sth;
       $self->{_iterator_idList_crosscheck} = $self->RepoCols("ALTTARGET");
       $self->{_iterator_idList_prefetch} = undef;
@@ -1584,11 +1588,10 @@ sub clearOSD {
   my ($self, $field) = @_;
   $field || (carp("no OSD field name provided"), return undef);
   defined $self->osdKeys($field) || (carp("no valid OSD field '$field'"), return undef);
-  my $sql = <<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 DELETE FROM osd WHERE key=?;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute($field) or croak("Could not execute $sql: ".$sth->errstr);
+  $sth->execute($field) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   return 1;
 }
 
@@ -1602,11 +1605,10 @@ sub addOSD {
   my ($self, $field, $value) = @_;
   $field || (carp("no OSD field name provided"), return undef);
   defined $self->osdKeys($field) || (carp("no valid OSD field '$field'"), return undef);
-  my $sql = <<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 INSERT INTO osd ( key, val ) VALUES ( ?, ? );
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute($field, $value) or croak("Could not execute $sql: ".$sth->errstr);
+  $sth->execute($field, $value) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   return 1;
 }
 
@@ -1637,11 +1639,10 @@ sub clearBeaconMeta {
   my ($self, $rfield) = @_;
   $rfield || (carp("no Beacon field name provided"), return undef);
   my $field = $self->beaconfields($rfield) or (carp("no valid Beacon field '$rfield'"), return undef);
-  my $sql = <<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 DELETE FROM osd WHERE key=?;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute($field) or croak("Could not execute $sql: ".$sth->errstr);
+  $sth->execute($field) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   return 1;
 }
 
@@ -1654,11 +1655,10 @@ sub addBeaconMeta {
   my ($self, $rfield, $value) = @_;
   $rfield || (carp("no Beacon field name provided"), return undef);
   my $field = $self->beaconfields($rfield) or (carp("no valid Beacon field '$rfield'"), return undef);
-  my $sql = <<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 INSERT INTO osd ( key, val ) VALUES ( ?, ? );
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute($field, $value) or croak("Could not execute $sql: ".$sth->errstr);
+  $sth->execute($field, $value) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   return 1;
 }
 

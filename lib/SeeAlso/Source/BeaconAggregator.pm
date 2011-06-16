@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_52';
+    $VERSION     = '0.2_53';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -408,15 +408,14 @@ sub query {          # SeeAlso-Simple response
 #        6      7         8       9          10          11          12   13
       qw(TARGET ALTTARGET MESSAGE ONEMESSAGE SOMEMESSAGE DESCRIPTION NAME INSTITUTION);
 #              0             1              2              3             4             5
-  my ($sql) =<<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 SELECT beacons.hash, beacons.altid, beacons.seqno, beacons.hits, beacons.info, beacons.link,
        repos.$tfield, repos.$afield, repos.$mfield, repos.$m1field, repos.$msfield, repos.$dfield, repos.$nfield, repos.$ifield
   FROM beacons NATURAL LEFT JOIN repos
   WHERE beacons.hash=?
   ORDER BY repos.sort, repos.alias;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute($hash) or croak("Could not execute $sql: ".$sth->errstr);
+  $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   my %didalready;
   while ( my $onerow = $sth->fetchrow_arrayref() ) {
 #      last unless defined $onerow->[0];           # strange end condition
@@ -513,11 +512,11 @@ sub Seqnos {
                                     : "WHERE $dbcolname=?";
     };
 
-  my $sql =<<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 SELECT seqno FROM repos $constraint ORDER BY seqno;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  my $aryref = $self->{dbh}->selectcol_arrayref($sth, {Columns=>[1]}, ($query ? ($query) : ()))  or croak("Could not execute $sql: ".$sth->errstr);
+  my $aryref = $self->{dbh}->selectcol_arrayref($sth, {Columns=>[1]}, ($query ? ($query) : ()))
+      or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   return $aryref ? (@$aryref) : ();
 }
 
@@ -545,11 +544,11 @@ sub RepoCols {
       croak("column name '$colname' not known. Aborting")};
 
   my ($constraint, @cval) = mkConstraint($seqno_or_alias);
-  my $sql =<<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 SELECT seqno, $dbcolname FROM repos $constraint ORDER BY alias;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  my $aryref = $self->{dbh}->selectcol_arrayref($sth, {Columns=>[1..2]}, @cval) or croak("Could not execute $sql: ".$sth->errstr);
+  my $aryref = $self->{dbh}->selectcol_arrayref($sth, {Columns=>[1..2]}, @cval)
+      or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   if ( $aryref ) {
       my %hash = @$aryref;
       return \%hash;
@@ -584,11 +583,10 @@ sub OSDValues {
   elsif ( $key ) {
       $constraint = " WHERE (key=?)"};
 
-  my $sql =<<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 SELECT key, val FROM osd $constraint;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute(($key ? ($key) : ())) or croak("Could not execute $sql: ".$sth->errstr);
+  $sth->execute(($key ? ($key) : ())) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
 
   my %result = ();
   while ( my $aryref = $sth->fetchrow_arrayref ) {
@@ -619,7 +617,7 @@ Returns a hashref with the contents of the admin table (readonly, not tied).
 sub admhash {
   my $self = shift;
 
-  my $admh = $self->{dbh}->prepare("SELECT key, val FROM admin;")
+  my $admh =  $self->stmtHdl("SELECT key, val FROM admin;")
           or croak("Could not prepare statement (dump admin table)".$self->{dbh}->errstr);
   $admh->execute() or croak("Could not execute statement (dump admin table): ".$admh->errstr);
   my %adm = ();
@@ -652,11 +650,10 @@ defined but false.
 sub findExample {
   my ($self, $goal, $offset, $sth) = @_;
   unless ( $sth ) {
-      my ($sql) =<<"XxX";
+      $sth = $self->stmtHdl(<<"XxX");
 SELECT hash, COUNT(*), SUM(hits) FROM beacons GROUP BY hash HAVING COUNT(*)>=? LIMIT 1 OFFSET ?;
 XxX
 #
-      $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
       $_[3] = $sth if defined $_[3];
     };
   $offset ||= 0;
@@ -703,6 +700,27 @@ sub urlpseudoescape {     # we don't do a thorough job here, because it is not c
       s/([^\x21-\x7e])/sprintf("%%%02X",ord($1))/eg;
   return $_;
 }
+
+
+# SQL handle management
+sub stmtHdl {
+  my ($self, $sql, $errtext) = @_;
+  $errtext ||= $sql;
+  my $if_active = 1;
+  if ( $ENV{'DBI_PROFILE'} ) {
+      my @callerinfo = caller;
+      print STDERR "explain $sql (@callerinfo)===\n";
+      my $esth = $self->{dbh}->prepare("EXPLAIN QUERY PLAN $sql") or croak("cannot prepare for explain $sql");
+      $esth->execute() or croak("cannot execute explain statement $sql");
+      local $" = " | ";
+      while ( my $rowref = $esth->fetchrow_arrayref ) {
+          print STDERR "@$rowref\n";
+        }
+      print STDERR "===\n";
+      $if_active = 0;
+    }
+  return $self->{dbh}->prepare_cached($sql, {}, $if_active) or croak("Could not prepare $errtext: ".$self->{dbh}->errstr);
+};
 
 
 =head1 BUGS

@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_50";
+our $VERSION = "0.2_53";
 
 =head1 NAME
 
@@ -148,11 +148,10 @@ sub beacon {
 
   print @$headerref;
 
-  my $sql =<<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 SELECT hash, COUNT(DISTINCT seqno) FROM beacons GROUP BY hash ORDER BY hash;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute() or croak("Could not execute $sql: ".$sth->errstr);
+  $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   my $c = (defined $self->{identifierClass}) ? $self->{identifierClass} : undef;
   my $rows = 0;
   while ( my $row = $sth->fetchrow_arrayref ) {
@@ -179,11 +178,10 @@ sub dumpmeta {    # cgibase unAPIformatname headers_only {preset}
   my $headersonly = shift @_ if @_ && !ref($_[0]);
   my $preset = (@_ && ref($_[0])) ? (shift @_) : {};
 
-  my $metasql =<<"XxX";
+  my $metasth = $self->stmtHdl(<<"XxX");
 SELECT key, val FROM osd;
 XxX
-  my $metasth = $self->{dbh}->prepare($metasql) or croak("Could not prepare $metasql: ".$self->{dbh}->errstr);
-  $metasth->execute() or croak("Could not execute $metasql: ".$metasth->errstr);
+  $metasth->execute() or croak("Could not execute >".$metasth->{Statement}."<: ".$metasth->errstr);
 
   my (%osd, %beaconmeta);
   while ( my $aryref = $metasth->fetchrow_arrayref ) {
@@ -359,7 +357,7 @@ sub redirect {          # Liste der Beacon-Header fuer Treffer oder einfaches re
       qw(TARGET  ALTTARGET IMGTARGET MESSAGE NAME   INSTITUTION);
 # above  4       5         6         7       8      9
 # below        0              1             2             3
-  my $sql =<<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 SELECT beacons.altid, beacons.hits, beacons.info, beacons.link,
        repos.$tfield, repos.$afield, repos.$gfield, repos.$mfield, repos.$nfield, repos.$ifield,
        repos.alias
@@ -367,8 +365,7 @@ SELECT beacons.altid, beacons.hits, beacons.info, beacons.link,
   WHERE beacons.hash=? 
   ORDER BY repos.sort, repos.alias;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute($hash) or croak("Could not execute $sql: ".$sth->errstr);
+  $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   my @rawres;
   while ( my $onerow = $sth->fetchrow_arrayref ) {
       my $uri = $onerow->[3];         # Evtl. Expliziter Link
@@ -506,11 +503,10 @@ sub sources {          # Liste der Beacon-Header fuer Treffer
       return "";
     };
 
-  my ($countsql) =<<"XxX";
+  my $countsth = $self->stmtHdl(<<"XxX");
 SELECT COUNT(DISTINCT seqno) FROM beacons WHERE hash=?;
 XxX
-  my $countsth = $self->{dbh}->prepare($countsql) or croak("Could not prepare $countsql: ".$self->{dbh}->errstr);
-  $countsth->execute($hash) or croak("Could not execute $countsql: ".$countsth->errstr);
+  $countsth->execute($hash) or croak("Could not execute >".$countsth->{Statement}."<: ".$countsth->errstr);
   my $hitsref = $countsth->fetchrow_arrayref;
   my $hits = $hitsref->[0] || 0;
 
@@ -539,14 +535,13 @@ XxX
   push(@result, $cgi->p($cgi->span("Identifier:"), $cgi->a({href=>"$prefix$pretty"}, "$prefix$pretty"))) if $prefix;
   push(@result, '</div>');
 
-  my ($sql) =<<"XxX";
+  my $sth = $self->stmtHdl(<<"XxX");
 SELECT beacons.*, repos.*
   FROM beacons NATURAL LEFT JOIN repos
   WHERE beacons.hash=? 
   ORDER BY repos.sort, repos.alias;
 XxX
-  my $sth = $self->{dbh}->prepare($sql) or croak("Could not prepare $sql: ".$self->{dbh}->errstr);
-  $sth->execute($hash) or croak("Could not execute $sql: ".$sth->errstr);
+  $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   my $rows = 0;
   push(@result, '<div id="results">');
   my ($lastseq, @groups) = (0, ());
@@ -753,11 +748,10 @@ Beacon header fields
 sub get_meta {
   my ($self) = @_;
 
-  my $metasql =<<"XxX";
+  my $metasth = $self->stmtHdl(<<"XxX");
 SELECT key, val FROM osd;
 XxX
-  my $metasth = $self->{dbh}->prepare($metasql) or croak("Could not prepare $metasql: ".$self->{dbh}->errstr);
-  $metasth->execute() or croak("Could not execute $metasql: ".$metasth->errstr);
+  $metasth->execute() or croak("Could not execute >".$metasth->{Statement}."<: ".$metasth->errstr);
   my (%osd, %beaconmeta);
   while ( my $aryref = $metasth->fetchrow_arrayref ) {
       my ($key, $val) = @$aryref;

@@ -54,7 +54,7 @@ my @cexcess = keys %cexpected;
 is("@cexcess", "", "undelivered identifiers for idCounts");
 
 %cexpected = (
-  '118784226' => [1, 0],
+  '118784226' => [2, 0],
   '132464462' => [1, 1],
   '118624458' => [1, 2],
   '103117741' => [1, 0],
