@@ -706,20 +706,26 @@ sub urlpseudoescape {     # we don't do a thorough job here, because it is not c
 sub stmtHdl {
   my ($self, $sql, $errtext) = @_;
   $errtext ||= $sql;
-  my $if_active = 1;
+  my $if_active = $ENV{'DBI_PROFILE'} ? 0 : 1;
+  my $sth = $self->{dbh}->prepare_cached($sql, {}, $if_active)
+      or croak("Could not prepare $errtext: ".$self->{dbh}->errstr);
   if ( $ENV{'DBI_PROFILE'} ) {
       my @callerinfo = caller;
-      print STDERR "explain $sql (@callerinfo)===\n";
-      my $esth = $self->{dbh}->prepare("EXPLAIN QUERY PLAN $sql") or croak("cannot prepare for explain $sql");
-      $esth->execute() or croak("cannot execute explain statement $sql");
-      local $" = " | ";
-      while ( my $rowref = $esth->fetchrow_arrayref ) {
-          print STDERR "@$rowref\n";
+      if ( $sth->{Executed} ) {
+          print STDERR "reusing handle for $sql (@callerinfo)===\n";
         }
-      print STDERR "===\n";
-      $if_active = 0;
+      else {
+          print STDERR "explain $sql (@callerinfo)===\n";
+          my $esth = $self->{dbh}->prepare("EXPLAIN QUERY PLAN $sql") or croak("cannot prepare for explain $sql");
+          $esth->execute() or croak("cannot execute explain statement $sql");
+          local $" = " | ";
+          while ( my $rowref = $esth->fetchrow_arrayref ) {
+              print STDERR "@$rowref\n";
+            }
+          print STDERR "===\n";
+        }
     }
-  return $self->{dbh}->prepare_cached($sql, {}, $if_active) or croak("Could not prepare $errtext: ".$self->{dbh}->errstr);
+  return $sth;
 };
 
 

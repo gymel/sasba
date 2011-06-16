@@ -663,9 +663,9 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
   printf("WARNING: expected %u valid records, counted %u\n", $recok, $counti) if $recok != $counti;
 
   my $updh = $self->stmtHdl(<<"XxX");
-UPDATE OR FAIL repos SET counti=?,countu=?,fstat=?,utime=?,ustat=? WHERE seqno==$collno;
+UPDATE OR FAIL repos SET counti=?,countu=?,fstat=?,utime=?,ustat=? WHERE seqno==?;
 XxX
-  $updh->execute($counti, $countu, $statline, time(), "successfully loaded")
+  $updh->execute($counti, $countu, $statline, time(), "successfully loaded", $collno)
       or croak("Could not execute >".$updh->{Statement}."<: ".$updh->errstr);
 
   close(BKN);
@@ -1068,9 +1068,9 @@ XxX
       my ($collno, $count, $statref) = $self->loadFile($tmpfile, {_alias => $alias, _uri => $uri, _ruri => $nuri, _mtime => $lm}, %options);
       if ( ! $collno && $osq ) {
           my $usth = $self->stmtHdl(<<"XxX");
-UPDATE OR FAIL repos SET utime=?,ustat=? WHERE seqno==$osq;
+UPDATE OR FAIL repos SET utime=?,ustat=? WHERE seqno==?;
 XxX
-          $usth->execute(time(), $statref ? "load error: $statref" : "internal error")
+          $usth->execute(time(), ($statref ? "load error: $statref" : "internal error"), $osq)
                or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
         };
 
@@ -1082,9 +1082,9 @@ XxX
       my $vt = $response->fresh_until(h_min => 1800, h_max => 6 * 86400);
       printf("  %-30s %s\n", "Will not try again before", scalar localtime($vt)) if $options{'verbose'};
       my $usth = $self->stmtHdl(<<"XxX");
-UPDATE OR FAIL repos SET utime=?,ustat=?,ruri=? WHERE seqno==$osq;
+UPDATE OR FAIL repos SET utime=?,ustat=?,ruri=? WHERE seqno==?;
 XxX
-      $usth->execute(time(), $response->status_line, $nuri)
+      $usth->execute(time(), $response->status_line, $nuri, $osq)
           or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
       return undef;
     }
@@ -1093,9 +1093,9 @@ XxX
       print $response->headers_as_string, "\n";
       return undef unless $osq;
       my $usth = $self->stmtHdl(<<"XxX");
-UPDATE OR FAIL repos SET utime=?,ustat=?,ruri=? WHERE seqno==$osq;
+UPDATE OR FAIL repos SET utime=?,ustat=?,ruri=? WHERE seqno==?;
 XxX
-      $usth->execute(time(), $response->status_line, $nuri)
+      $usth->execute(time(), $response->status_line, $nuri, $osq)
           or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
       return undef;
     };
