@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_53';
+    $VERSION     = '0.2_54';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -138,7 +138,7 @@ Its columns are:
 
 =item hash
 
- Identifier. If a C<SeeAlso::Source::Identifier> instance is provided,
+ Identifier. If a (subclass of) C<SeeAlso::Source::Identifier> instance is provided,
  this will be transformed by the C<hash()> method.
 
 =item seqno
@@ -234,12 +234,15 @@ XxX
 
 
 # enforce constraints
-  $hdl->do("CREATE UNIQUE INDEX IF NOT EXISTS hshrepalt ON beacons(hash, seqno, altid);") or croak("Setup error: ".$hdl->errstr);
+# $hdl->do("CREATE UNIQUE INDEX IF NOT EXISTS hshrepalt ON beacons(hash, seqno, altid);") or croak("Setup error: ".$hdl->errstr);
+  $hdl->do("DROP INDEX IF EXISTS hshrepalt;") or croak("Setup error: ".$hdl->errstr);
 # Faciliate lookups
-# $hdl->do("CREATE INDEX IF NOT EXISTS ref ON beacons(hash);") or croak("Setup error: ".$hdl->errstr);
   $hdl->do("DROP INDEX IF EXISTS ref;") or croak("Setup error: ".$hdl->errstr);
-# maintenance
-  $hdl->do("CREATE INDEX IF NOT EXISTS maintenance ON beacons(seqno);") or croak("Setup error: ".$hdl->errstr);
+  $hdl->do("CREATE INDEX IF NOT EXISTS lookup ON beacons(hash);") or croak("Setup error: ".$hdl->errstr);
+# maintenance and enforce constraints
+  $hdl->do("CREATE UNIQUE INDEX IF NOT EXISTS mntnce ON beacons(seqno, hash, altid);") or croak("Setup error: ".$hdl->errstr);
+# $hdl->do("CREATE INDEX IF NOT EXISTS maintenance ON beacons(seqno);") or croak("Setup error: ".$hdl->errstr);
+  $hdl->do("DROP INDEX IF EXISTS maintenance;") or croak("Setup error: ".$hdl->errstr);
 
 # foreign key on cascade does not work?
 
@@ -277,7 +280,7 @@ XxX
   my $verkey = "DATA_VERSION";
   my $goalver = $SeeAlso::Source::BeaconAggregator::DATA_VERSION;
   my $dbver = $admref->{$verkey} || 0;
-  if ( $dbver && ($dbver != $goalver) ) {
+  if ( $dbver != $goalver ) {
       print "NOTICE: Database version $dbver: Upgrading to $goalver\n";
     # alter tables here
       if ( $dbver < 2 ) {
@@ -286,8 +289,7 @@ XxX
         # ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("REMARK");
         # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
         };
-
-      $hdl->do("ANALYZE;");   # recommended after structure changes
+      $hdl->do("ANALYZE;");
     }
   elsif ( $options{'verbose'} ) {
       print "INFO: Database version $dbver is current\n"};
@@ -594,7 +596,7 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
            }
          else {
              croak("Could not insert: ($id, $hits, $info, $link): ".$inserthandle->errstr)};
-         unless ( ++$reccount % 5000 ) {
+         unless ( ++$reccount % 10000 ) {
              $self->{dbh}->{AutoCommit} = 1;
              print "$reccount\n" if $options{'verbose'};
              $self->{dbh}->{AutoCommit} = 0;
@@ -649,16 +651,23 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
 
   my $recok = $recupd + $recnew;
 
-  my $ct1hdl = $self->stmtHdl("SELECT COUNT(*) FROM beacons WHERE seqno==?");
+  my $ct1hdl = $self->stmtHdl("SELECT COUNT(*) FROM beacons WHERE seqno==? LIMIT 1;");
   $ct1hdl->execute($collno) or croak("could not execute live count: ".$ct1hdl->errstr);
   my $ct1ref = $ct1hdl->fetchrow_arrayref();
   my $counti = $ct1ref->[0] || 0;
 
 # my $ct2hdl = $self->stmtHdl("SELECT COUNT(DISTINCT hash) FROM beacons WHERE seqno==?");
-  my $ct2hdl = $self->stmtHdl("SELECT COUNT(1) FROM (SELECT DISTINCT hash FROM beacons WHERE seqno==?)");
+# using subquery to trick SQLite into using indices
+  my $ct2hdl = $self->stmtHdl("SELECT COUNT(*) FROM (SELECT DISTINCT hash FROM beacons WHERE seqno==?) LIMIT 1;");
   $ct2hdl->execute($collno) or croak("could not execute live count: ".$ct2hdl->errstr);
   my $ct2ref = $ct2hdl->fetchrow_arrayref();
   my $countu = $ct2ref->[0] || 0;
+
+# combined query turned out as not as efficient
+# my $ct0hdl = $self->stmtHdl("SELECT COUNT(*), COUNT(DISTINCT hash) FROM beacons WHERE seqno==? LIMIT 1;");
+# $ct0hdl->execute($collno) or croak("could not execute live count: ".$ct0hdl->errstr);
+# my $ct0ref = $ct0hdl->fetchrow_arrayref();
+# my ($counti, $countu) = ($ct0ref->[0] || 0, $ct0ref->[1] || 0);
 
   printf("WARNING: expected %u valid records, counted %u\n", $recok, $counti) if $recok != $counti;
 
@@ -1248,7 +1257,6 @@ XxX
       $usth->execute(0, 0, time, "purged", $seqno)
           or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
     };
-  $self->{dbh}->do("ANALYZE;");
   return $trows;
 }
 
@@ -1350,16 +1358,23 @@ XxX
 
   my $collno = $info->{seqno} || $seqno_or_alias;
 
-  my $ct1hdl = $self->stmtHdl("SELECT COUNT(*) FROM beacons WHERE seqno==?");
+  my $ct1hdl = $self->stmtHdl("SELECT COUNT(*) FROM beacons WHERE seqno==? LIMIT 1;");
   $ct1hdl->execute($collno) or croak("could not execute live count".$ct1hdl->errstr);
   my $ct1ref = $ct1hdl->fetchrow_arrayref();
   my $counti = $ct1ref->[0] || 0;
 
 # my $ct2hdl = $self->stmtHdl("SELECT COUNT(DISTINCT hash) FROM beacons WHERE seqno==?");
-  my $ct2hdl = $self->stmtHdl("SELECT COUNT(1) FROM (SELECT DISTINCT hash FROM beacons WHERE seqno==?)");
+# use subquery to trick SQLite into using indices
+  my $ct2hdl = $self->stmtHdl("SELECT COUNT(*) FROM (SELECT DISTINCT hash FROM beacons WHERE seqno==?) LIMIT 1;");
   $ct2hdl->execute($collno) or croak("could not execute live count".$ct2hdl->errstr);
   my $ct2ref = $ct2hdl->fetchrow_arrayref();
   my $countu = $ct2ref->[0] || 0;
+
+# combined query turned out as not as efficient
+#  my $ct0hdl = $self->stmtHdl("SELECT COUNT(*), COUNT(DISTINCT hash) FROM beacons WHERE seqno==? LIMIT 1;");
+#  $ct0hdl->execute($collno) or croak("could not execute live count: ".$ct0hdl->errstr);
+#  my $ct0ref = $ct0hdl->fetchrow_arrayref();
+#  my ($counti, $countu) = ($ct0ref->[0] || 0, $ct0ref->[1] || 0);
 
   my %meta = ('-live_count_id' => $counti, '-live_unique_id' => $countu, _seqno => $collno);
   my %result = ();
@@ -1441,13 +1456,17 @@ sub idStat {
           return 0;
         };
     };
-  my $count_what = $options{'distinct'} ? "DISTINCT hash" : "hash";
+# my $count_what = $options{'distinct'} ? "DISTINCT hash" : "*";
 # will not be optimized by SQLite or mySL: SELECT COUNT($count_what) FROM beacons $cond;
+# my $sth= $self->stmtHdl("SELECT COUNT($count_what) FROM beacons $cond LIMIT 1;");
+  my $from = $options{'distinct'} ? "(SELECT DISTINCT hash FROM beacons $cond)"
+                                  : "beacons $cond";
   my $sth = $self->stmtHdl(<<"XxX");
-SELECT COUNT($count_what) FROM beacons $cond;
+SELECT COUNT(*) FROM $from LIMIT 1;
 XxX
   $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   my $hits = $sth->fetchrow_arrayref;
+
   return $hits->[0] || 0;
 };
 

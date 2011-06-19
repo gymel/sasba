@@ -14,18 +14,18 @@ WriteMakefile
                            'DBD::SQLite' => '1.25',
                            'CGI' => '3.0',
                            'SeeAlso::Identifier' => '0.46',
+                           'URI::file' => '1.0',
                            'SeeAlso::Response' => '0.54',
                            'DBI' => '1.57',
                            'SeeAlso::Identifier::GND' => '0.54',
                            'SeeAlso::Source' => '0.56',
-                           'HTTP::Date' => '1.46',
                            'Carp' => 0,
+                           'HTTP::Date' => '1.46',
                            'Test::More' => '0.90',
                            'LWP::UserAgent' => '2.031',
-                           'SeeAlso::Server' => '0.57',
                            'File::Temp' => 0,
-                           'HTTP::Request' => '1.40',
-                           'Cwd' => '3.0'
+                           'SeeAlso::Server' => '0.57',
+                           'HTTP::Request' => '1.40'
                          }
         )
 ;

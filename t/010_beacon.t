@@ -3,7 +3,7 @@
 # t/010_beacon.t - check module loading and create testing directory
 
 use Test::More tests => 14;
-use Cwd 'abs_path';
+use URI::file;
 use LWP::UserAgent;
 use HTTP::Request;
 use File::Temp;
@@ -32,7 +32,7 @@ subtest 'load file' => sub {
 };
 
 my $file = "t/beacon2.txt";
-my $file_uri = 'file://'.abs_path($file);
+my $file_uri = URI::file->new_abs($file);
 
 subtest 'LWP framework' => sub {
 	plan tests => 11;

@@ -14,6 +14,7 @@ my $verbose = 1;
 my $ignore_header_errors = 0;
 my $action = "list";
 my $dbroot = "./beacondbs";
+my $cache_size;
 my $dsn = "pnd-aks";
 my ($distinct, $force, $quiet, $dbfile, $itype);
 
@@ -44,6 +45,8 @@ Options:
   --dbroot     ($dbroot)
   --ignore-header-errors  [for update and load]
   --distinct  [for idcounts and idstat]
+
+  --cache_size  [SQLite pragma]
 
 Actions and Arguments:
 
@@ -135,6 +138,7 @@ GetOptions (
   'itype=s' => \$itype,
   'dbfile=s' => \$dbfile,
   'dbroot=s' => \$dbroot,
+  'cache_size=s' => \$cache_size,
   'dsn=s' => \$dsn,
 ) or pod2usage({-message => 'Invalid option encountered', -exitval => 2});
 
@@ -194,6 +198,7 @@ my $db = SeeAlso::Source::BeaconAggregator::Maintenance->new(
         'verbose' => $verbose,
     ) or die "could not open database $dsn / $dbfile";
 
+$db->{dbh}->do("PRAGMA cache_size = $cache_size;") or die "could not set cache_size to $cache_size" if defined $cache_size;
 
 =head2 Actions
 
@@ -807,6 +812,7 @@ sub refreshOSD {    #
     print " ... Examples by coincidence" if $verbose;
     my $k = sprintf("%.0f", exp(log($repcnt)*4/5));  # 4 out of 5, 23 out of 50, 40 out of 100
     $k = $EXAMPLEGOAL if $EXAMPLEGOAL and ($k > $EXAMPLEGOAL);
+    print " [goal: clusters of size >$k]" if $verbose;
     my ($i, $idnref);
     my $j = 0;
     my $sthcache = "";
