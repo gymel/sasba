@@ -17,13 +17,13 @@ name: SeeAlso-Source-BeaconAggregator
 provides:
   SeeAlso::Source::BeaconAggregator:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
-    version: 0.2_54
+    version: 0.2_55
   SeeAlso::Source::BeaconAggregator::Maintenance:
     file: lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm
-    version: 0.2_54
+    version: 0.2_55
   SeeAlso::Source::BeaconAggregator::Publisher:
     file: lib/SeeAlso/Source/BeaconAggregator/Publisher.pm
-    version: 0.2_54
+    version: 0.2_55
 recommends:
   Getopt::Long: 0
   LWP: 5.827
@@ -47,4 +47,4 @@ requires:
   perl: v5.8.2
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.2_54
+version: 0.2_55

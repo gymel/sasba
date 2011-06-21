@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_54';
+    $VERSION     = '0.2_55';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -315,17 +315,17 @@ XxX
       else {
           warn "fixing identifierClass as $wanttype in admin table\n" if $options{'verbose'};
           print "fixing identifierClass as $wanttype" if $options{'verbose'};
-          my $ich = $self->stmtHdl("INSERT INTO admin VALUES (?, ?);", "fix identifier class statement");
-          $ich->execute($ickey, $wanttype)
-                or croak("Could not execute fix identifier class statement: ".$ich->errstr);
+          my $ichdl = $self->stmtHdl("INSERT INTO admin VALUES (?, ?);", "fix identifier class statement");
+          $ichdl->execute($ickey, $wanttype)
+                or croak("Could not execute fix identifier class statement: ".$ichdl->errstr);
           $self->{identifierClass} = $options{identifierClass};
         };
     }
   elsif ( (exists $options{identifierClass}) and (not $options{identifierClass}) ) {
       print "removing fixed identifierClass from admin table\n" if $options{'verbose'};
-      my $ich = $self->stmtHdl("DELETE FROM admin WHERE key=?;", "identifier class statement");
-      $ich->execute($ickey)
-            or croak("Could not execute remove identifier class statement: ".$ich->errstr);
+      my $ichdl = $self->stmtHdl("DELETE FROM admin WHERE key=?;", "identifier class statement");
+      $ichdl->execute($ickey)
+            or croak("Could not execute remove identifier class statement: ".$ichdl->errstr);
       delete $self->{identifierClass};
     };
 
@@ -1681,6 +1681,30 @@ XxX
   return 1;
 }
 
+=head3 admin ( [$field, [$value]] )
+
+Manipulates the admin table.
+
+Yields a hashref to the admin tabl if called without arguments.
+
+If called with $field, returns the current value, and sets the
+table entry to $value if defined.
+
+
+=cut 
+
+sub admin {
+  my ($self, $field, $value) = @_;
+  my $admref =  $self->admhash();
+  return $admref unless $field;
+  my $retval = $admref->{$field};
+  return $retval unless defined $value;
+
+  my $admh = $self->stmtHdl("INSERT OR REPLACE INTO admin VALUES (?, ?);");
+  $admh->execute($field, $value)
+       or croak("Could not execute update admin table: ".$admh->errstr);
+  return defined($retval) ? $retval : "";
+}
 
 
 # on-the-fly conversions

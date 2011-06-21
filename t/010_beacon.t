@@ -2,7 +2,7 @@
 
 # t/010_beacon.t - check module loading and create testing directory
 
-use Test::More tests => 14;
+use Test::More tests => 15;
 use URI::file;
 use LWP::UserAgent;
 use HTTP::Request;
@@ -215,4 +215,24 @@ subtest 'listCollections' => sub {
   };
 
 
+# adm entries
+subtest 'admin' => sub {
+	plan tests => 5;
+	my $expected = { # key, value
+	    DATA_VERSION => 1,
+#	    IDENTIFIER_TYPE => "",
+	  };
+	my $admref = $use->admin();
+	is_deeply($admref, $expected);
+
+	my $expected2 = { # key, value
+	    %$expected,
+	    FOO => "bar",
+	  };
+	is($use->admin('FOO'), undef, "FOO not yet set");
+	is($use->admin('FOO', 'foobar'), "", "FOO to be set");
+	is($use->admin('FOO', 'bar'), "foobar", "FOO was set");	
+	$admref = $use->admin();
+	is_deeply($admref, $expected2);
+  }	
 

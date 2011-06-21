@@ -77,6 +77,10 @@ Actions and Arguments:
   idcounts [identifier/pattern]
   idlist [identifier/pattern]
 
+  admin [field[=value]]      list/get/set admin properties:
+     DATA_VERSION
+     IDENTIFIER_CLASS
+
 =cut
 
 =head1 OPTIONS
@@ -720,6 +724,27 @@ elsif ( ($action eq "dumposd") or ($action eq "refreshosd") ) {
       };
   }
 
+=item header
+
+=cut
+
+elsif ( $action eq "admin" ) {
+    if ( scalar @ARGV ) {
+        my $did = 0;
+        while ( scalar @ARGV && (my $field = shift @ARGV) ) {
+            my($key, $val) = split(/=/, $field, 2);
+            my $oldval = $db->admin($key, $val);
+            my $changed = ((defined $val) && ($oldval ne $val)) ? "old value $oldval changed" : $oldval;
+            print "$key - $changed\n";
+          };
+      }
+    else {
+        my $admref = $db->admin();
+        foreach ( sort keys %$admref ) {
+            print "$_ : $admref->{$_}\n"}
+      }
+  }
+
 =item C<deflate>
 
 Interface to the C<deflate> method (DEFLATE+REINDEX+ANALYZE the
@@ -801,36 +826,44 @@ sub refreshOSD {    #
 
     print " ... Examples from Sources" if $verbose;
     $db->clearOSD("Examples");
+    my %known;
     my $explref = $db->RepoCols("EXAMPLES");
     foreach ( values %$explref ) {
         next unless defined $_;
-        my @expl = sort map { $_ ? $_ : () } split(/\s*\|\s*/, $_);
-        foreach ( @expl[0..1] ) {
-            $db->addOSD("Examples", $_) if $_};
+        my $cnt = 0;
+        foreach my $id ( sort map { $_ ? $_ : () } split(/\s*\|\s*/, $_) ) {
+            next if $known{$id}++;	
+            $db->addOSD("Examples", $id);
+            last if $cnt++ > 1;
+         };
       };
 
     print " ... Examples by coincidence" if $verbose;
     my $k = sprintf("%.0f", exp(log($repcnt)*4/5));  # 4 out of 5, 23 out of 50, 40 out of 100
     $k = $EXAMPLEGOAL if $EXAMPLEGOAL and ($k > $EXAMPLEGOAL);
     print " [goal: clusters of size >$k]" if $verbose;
-    my ($i, $idnref);
-    my $j = 0;
+    my ($i, $eref);
+    my $j = 1;
     my $sthcache = "";
-    while ( (++$j <= $k) and (my $tmpidnref = $db->findExample($j, 0, $sthcache)) ) {
-        $idnref = $tmpidnref;
-        $i = $j;
+    while ( ($j <= $k) and (my $tmperef = $db->findExample($j, 0, $sthcache)) ) {
+        $eref = $tmperef;
+	$eref->{response} =~ /^(\d+)\b/;
+        my $this = $1 || $j;
+        $i = $this;
+	$j = $this +1;
       };
     while ( $i ) {
         print " ($i)" if $verbose;
-        $db->addOSD("Examples", $idnref->{id}."|".$idnref->{response});
-        ($idnref =     $db->findExample($i,  10)) ? $db->addOSD("Examples", $idnref->{id}."|".$idnref->{response})
-                                                  : (($idnref = $db->findExample($i, 1)) && $db->addOSD("Examples", $idnref->{id}."|".$idnref->{response}),
+        $known{$eref->{id}} || $db->addOSD("Examples", $eref->{id}."|".$eref->{response});
+        $i = $EXAMPLEGOAL if $EXAMPLEGOAL and ($i > $EXAMPLEGOAL);
+        ($eref =     $db->findExample($i,  10, $sthcache)) ? $db->addOSD("Examples", $eref->{id}."|".$eref->{response})
+                                                  : (($eref = $db->findExample($i, 1, $sthcache)) && $db->addOSD("Examples", $eref->{id}."|".$eref->{response}),
                                                      last);
-        ($idnref =    $db->findExample($i,  100)) ? $db->addOSD("Examples", $idnref->{id}."|".$idnref->{response}) : last;
-        ($idnref =   $db->findExample($i,  1000)) ? $db->addOSD("Examples", $idnref->{id}."|".$idnref->{response}) : last;
-        ($idnref =  $db->findExample($i,  10000)) ? $db->addOSD("Examples", $idnref->{id}."|".$idnref->{response}) : last;
-        ($idnref = $db->findExample($i,  100000)) ? $db->addOSD("Examples", $idnref->{id}."|".$idnref->{response}) : last;
-        ($idnref = $db->findExample($i, 1000000)) ? $db->addOSD("Examples", $idnref->{id}."|".$idnref->{response}) : last;
+        ($eref =    $db->findExample($i,  100, $sthcache)) ? $db->addOSD("Examples", $eref->{id}."|".$eref->{response}) : last;
+        ($eref =   $db->findExample($i,  1000, $sthcache)) ? $db->addOSD("Examples", $eref->{id}."|".$eref->{response}) : last;
+        ($eref =  $db->findExample($i,  10000, $sthcache)) ? $db->addOSD("Examples", $eref->{id}."|".$eref->{response}) : last;
+        ($eref = $db->findExample($i,  100000, $sthcache)) ? $db->addOSD("Examples", $eref->{id}."|".$eref->{response}) : last;
+        ($eref = $db->findExample($i, 1000000, $sthcache)) ? $db->addOSD("Examples", $eref->{id}."|".$eref->{response}) : last;
         $i = 0;
       };
     print " ... done\n";
