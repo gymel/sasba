@@ -21,7 +21,7 @@ ok (defined $use, "created db with dsn");
 isa_ok ($use, 'SeeAlso::Source::BeaconAggregator');
 
 
-# load first beacon file
+# load first beacon file with "loadFile" method
 subtest 'load file' => sub {
 	plan tests => 4;
 	my ($seqno, $rec_ok, $message) = $use->loadFile("t/beacon1.txt", {_alias => 'foo'} );
@@ -34,9 +34,12 @@ subtest 'load file' => sub {
 my $file = "t/beacon2.txt";
 my $file_uri = URI::file->new_abs($file);
 
+# prepare update: handle file as file uri
 subtest 'LWP framework' => sub {
-	plan tests => 11;
-	ok($file_uri =~ /$file$/, "plausible file uri");
+	plan tests => 12;
+	note "load $file as $file_uri";
+	ok($file_uri =~ m!^file://!, "plausible file uri contains name of original file");
+	ok($file_uri =~ /$file$/, "plausible file uri contains file name");
 	my $ua = LWP::UserAgent->new(agent => "SA-S-BeaconAggregator ",      # end with space to get default agent appended
 			    env_proxy => 1,
 			      timeout => 300,
@@ -62,12 +65,12 @@ subtest 'LWP framework' => sub {
 	ok(unlink($tmpfile), 'tempfile could be removed');
 };
 
-# load second beacon file with update
+# load second beacon file with "update" method
 subtest 'load uri' => sub {
 	plan tests => 5;
 	note "load $file as $file_uri";
-	($seqno, $rec_ok) = $use->update("bar", {_uri => $file_uri}, verbose => 1 );
-	ok(defined $seqno, "load beacon file from uri (update)");
+	($seqno, $rec_ok) = $use->update("bar", {_uri => $file_uri}, verbose => 1);
+	ok(defined $seqno, "load beacon file as uri from $file_uri (update)");
 	ok($seqno && ($seqno > 0), "something was loaded");
 	is($seqno, 2, "expected seqno");
 	ok($rec_ok  && ($rec_ok > 0), "records loaded");
