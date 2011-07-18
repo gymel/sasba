@@ -4,10 +4,10 @@ author:
   - 'Thomas Berger <ThB@gymel.com>'
 build_requires:
   SeeAlso::Identifier::GND: 0.54
-  Test::More: 0.90
+  Test::More: 0.94
   URI::file: 1.0
 configure_requires:
-  Module::Build: 0.36
+  Module::Build: 0.35
 generated_by: 'Module::Build version 0.3613'
 license: perl
 meta-spec:
@@ -17,7 +17,7 @@ name: SeeAlso-Source-BeaconAggregator
 provides:
   SeeAlso::Source::BeaconAggregator:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
-    version: 0.2_55
+    version: 0.2_56
   SeeAlso::Source::BeaconAggregator::Maintenance:
     file: lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm
     version: 0.2_55
@@ -47,4 +47,4 @@ requires:
   perl: v5.8.2
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.2_55
+version: 0.2_56

@@ -21,7 +21,7 @@ WriteMakefile
                            'SeeAlso::Source' => '0.56',
                            'Carp' => 0,
                            'HTTP::Date' => '1.46',
-                           'Test::More' => '0.90',
+                           'Test::More' => '0.94',
                            'LWP::UserAgent' => '2.031',
                            'File::Temp' => 0,
                            'SeeAlso::Server' => '0.57',

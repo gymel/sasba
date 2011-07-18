@@ -20,11 +20,12 @@ my $build = Module::Build->new(
 		},
 	build_requires => {
       SeeAlso::Identifier::GND	=> '0.54',
-		    Test::More	=> '0.90',
+		    Test::More	=> '0.94',
 		     URI::file	=> '1.0',
 		},
-#	configure_requires => {
-#		},
+   configure_requires => {
+		 Module::Build  => '0.35',
+                },
 	recommends => {
 			   LWP	=> '5.827',
 		  Getopt::Long	=> 0,
