@@ -1,5 +1,9 @@
 Revision history for Perl module SeeAlso::Source::BeaconAggregator
 
+0.02_57 2011-09-14
+    - aliasfilter
+    - TODO: analyze conflicting identifier classes
+
 0.02 2011-05-22
     - Bug fixes
     - eliminated most fetchrow_array in favor of fetchrow_arraryref

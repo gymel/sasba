@@ -191,13 +191,14 @@ if ( $itype ) {
     $iclass = $package->new();
   }
 else {
-    $iclass = SeeAlso::Identifier->new()};
+    # $iclass = SeeAlso::Identifier->new();   # don't set, let it auto-initialize
+  };
 
 my $db = SeeAlso::Source::BeaconAggregator::Maintenance->new(
         'dbroot' => $dbroot,
         $dbfile ? ('file' => $dbfile) : (),
         $dsn ? ('dsn' => $dsn) : (),
-        'identifierClass' => $iclass,
+        $iclass ? ('identifierClass' => $iclass) : (),
         'accept' => {'VERSION' => qr'0.1', 'FORMAT' => '^(PND-)?B(?i:EACON)$'},
         'verbose' => $verbose,
     ) or die "could not open database $dsn / $dbfile";

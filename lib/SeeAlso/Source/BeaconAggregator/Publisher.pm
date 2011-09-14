@@ -162,8 +162,11 @@ XxX
 	  $c->value("");
           my $did = $c->hash($row->[0]) || $c->value($row->[0]);
           $expanded = $c->can("pretty") ? $c->pretty() : $c->value();
+                 # illegal identifier b/c different classes for loading and exporting?
+          next unless defined $expanded && ($expanded ne "");
         }
-      print $expanded.(($row->[1] > 1) ? "|".$row->[1] : "")."\n"}
+      print $expanded.(($row->[1] > 1) ? "|".$row->[1] : "")."\n";
+    }
 
   return $rows, $headerref;
 }
@@ -357,6 +360,7 @@ sub redirect {          # Liste der Beacon-Header fuer Treffer oder einfaches re
       qw(TARGET  ALTTARGET IMGTARGET MESSAGE NAME   INSTITUTION);
 # above  4       5         6         7       8      9
 # below        0              1             2             3
+#            10
   my $sth = $self->stmtHdl(<<"XxX");
 SELECT beacons.altid, beacons.hits, beacons.info, beacons.link,
        repos.$tfield, repos.$afield, repos.$gfield, repos.$mfield, repos.$nfield, repos.$ifield,
@@ -368,6 +372,7 @@ XxX
   $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   my @rawres;
   while ( my $onerow = $sth->fetchrow_arrayref ) {
+      next if $onerow->[10] && exists $self->{'aliasfilter'}->{$onerow->[10]};
       my $uri = $onerow->[3];         # Evtl. Expliziter Link
       my $guri = "";
 

@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_56';
+    $VERSION     = '0.2_57';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -270,6 +270,10 @@ contains an already instantiated object of that class
 
 Hashref with options to be piped through to SeeAlso::Source
 
+=item aliasfilter
+
+Hashref with aliases to be filtered out from query results
+
 =back
 
 Returns undef if unable to DBI->connect() to the database.
@@ -391,6 +395,18 @@ sub enrichdescription {
 
 ### Antworten fuer Anfragen als Format seealso
 
+=head3 set_aliasfilter ( @aliaslist )
+
+Init the hash with
+
+=cut
+
+sub set_aliasfilter {
+  my ($self, @aliaslist) = @_;
+  $self->{'aliasfilter'} = { map { ($_, "") } @aliaslist };
+  return $self->{'aliasfilter'};
+}
+
 =head3 	query( [ $identifier] )
 
 Returns a SeeAlso::Response listing all matches to the given string or
@@ -408,9 +424,11 @@ sub query {          # SeeAlso-Simple response
 #        6      7         8       9          10          11          12   13
       qw(TARGET ALTTARGET MESSAGE ONEMESSAGE SOMEMESSAGE DESCRIPTION NAME INSTITUTION);
 #              0             1              2              3             4             5
+#            14          15
   my $sth = $self->stmtHdl(<<"XxX");
 SELECT beacons.hash, beacons.altid, beacons.seqno, beacons.hits, beacons.info, beacons.link,
-       repos.$tfield, repos.$afield, repos.$mfield, repos.$m1field, repos.$msfield, repos.$dfield, repos.$nfield, repos.$ifield
+       repos.$tfield, repos.$afield, repos.$mfield, repos.$m1field, repos.$msfield, repos.$dfield, repos.$nfield, repos.$ifield,
+       repos.sort, repos.alias
   FROM beacons NATURAL LEFT JOIN repos
   WHERE beacons.hash=?
   ORDER BY repos.sort, repos.alias;
@@ -419,6 +437,8 @@ XxX
   my %didalready;
   while ( my $onerow = $sth->fetchrow_arrayref() ) {
 #      last unless defined $onerow->[0];           # strange end condition
+      next if $onerow->[15] && exists $self->{'aliasfilter'}->{$onerow->[15]};
+
       my $hits = $onerow->[3];
 
       my $uri;
@@ -443,7 +463,7 @@ XxX
 
 #     my $description = $hits;     # entsprechend opensearchsuggestions: pleonastisch, langweilig
 #     my $description = $onerow->[12] || $onerow->[13] || $onerow->[8] || $onerow->[10] || $onerow->[5]; # NAME or INSTITUTION or SOMEMESSAGE or MESSAGE
-      my $description = $onerow->[13] || $onerow->[12] || $onerow->[8] || $onerow->[10] || $onerow->[5]; # INSTITUTION or NAME or SOMEMESSAGE or MESSAGE
+      my $description = $onerow->[13] || $onerow->[12] || $onerow->[8] || $onerow->[10] || $onerow->[5] || ""; # INSTITUTION or NAME or SOMEMESSAGE or MESSAGE
 
       $response->add($label, $description, $uri) unless $didalready{join("\x7f", $label, $description, $uri)}++;
     }

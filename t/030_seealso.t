@@ -2,7 +2,7 @@
 
 # t/020_seealso.t - test aggregator methods only
 
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator' );
@@ -83,6 +83,37 @@ subtest 'query existing' => sub {
 	is($response->toJSON(), 
 	   '["118559796",["Who Cares"],["Who Cares"],["http://www.deutsche-biographie.de/pnd118559796.html"]]',
 	   "JSON string");
+  };
+
+subtest 'query with filter' => sub {
+	plan tests => 10;
+	my ($response, $label, $description, $url);
+
+        ok($use->set_aliasfilter("bar", "baz"), "set Filter");
+	$response = $use->query('118559796');
+	is($response->size, 0, "Size of filtered response");
+	is($response->toJSON(), '["118559796",[],[],[]]', "JSON string");
+
+	$response = $use->query('118784226');
+	is($response->size, 1, "Size of filtered response 2");
+	is($response->toJSON(), 
+	   '["118784226",["???"],[""],["http://d-nb.info/gnd/118784226"]]',
+	   "JSON string");
+
+        ok($use->set_aliasfilter(), "clear Filter");
+
+	$response = $use->query('118559796');
+	is($response->size, 1, "Size of unfiltered response");
+	is($response->toJSON(), 
+	   '["118559796",["Who Cares"],["Who Cares"],["http://www.deutsche-biographie.de/pnd118559796.html"]]',
+	   "JSON string");
+
+	$response = $use->query('118784226');
+	is($response->size, 2, "Size of unfiltered response 2");
+	is($response->toJSON(), 
+	   '["118784226",["Who Cares [de.wikisource.org]","???"],["Who Cares",""],["http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226","http://d-nb.info/gnd/118784226"]]',
+	   "JSON string");
+
   };
 
 
