@@ -613,7 +613,7 @@ elsif ( $action eq "idlist" ) {
         print "$id";
         local($") = ",";
         foreach my $rowref ( @list ) {
-            pop @$rowref while @$rowref && (! defined $rowref->[$#{@$rowref}]);
+            pop @$rowref while @$rowref && (! defined $rowref->[$#{$rowref}]);
             my @pretty = map { (defined $_) ? $_ : "" } @$rowref;
             print "\t@pretty";
           }
