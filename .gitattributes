@@ -1,3 +1,5 @@
 *.pm ident
 *.pm text
 *.t text
+bin/sasbactrl ident
+bin/sasbactrl eol=lf
