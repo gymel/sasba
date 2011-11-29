@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# $Id$
 use lib "./lib";
 use strict;
 use utf8;
@@ -14,12 +15,11 @@ my $verbose = 1;
 my $ignore_header_errors = 0;
 my $action = "list";
 my $dbroot = "./beacondbs";
-my $cache_size;
-my $dsn = "pnd-aks";
+my ($dsn, $cache_size);
 my ($distinct, $force, $quiet, $dbfile, $itype);
 
 #  Application constants
-our $EXAMPLEGOAL = 30;      # don't try to find examples with higher hit count
+our $EXAMPLEGOAL = 50;              # don't try to find examples with higher hit count
 
 our $RETRYWAIT = 250*60;            # w/o #REVISIT hint: never attempt more often (4h 10')
 our $NOREVISITWAIT = 1400*60;       # w/o #REVISIT hint: never revisit sooner (23h20')
@@ -441,6 +441,7 @@ elsif ( $action eq "update" ) {
     my $seqno_or_alias = shift @ARGV;
     my $did;
     if ( $seqno_or_alias ) {
+        die "no wildcards allowed in seqno_or_alias: $seqno_or_alias" if $seqno_or_alias =~ /%/;
         my $uri = shift @ARGV || "";
         my $cc;
         print "\n==> $seqno_or_alias ($uri) <==\n" if $verbose;

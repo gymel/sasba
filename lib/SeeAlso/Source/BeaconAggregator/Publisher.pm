@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_58";
+our $VERSION = "0.2_59";
 
 =head1 NAME
 
@@ -358,7 +358,7 @@ sub redirect {          # Liste der Beacon-Header fuer Treffer oder einfaches re
       return "";
     };
 
-  my $clause = $formatprops->{force_single} ? "LIMIT 1" : "ORDER BY repos.sort, repos.alias";
+  my $clause = $extra->{force_single} ? "LIMIT 1" : "ORDER BY repos.sort, repos.alias";
   my (  $tfield,$afield,  $gfield,  $mfield,$nfield,$ifield) = map{ scalar $self->beaconfields($_) } 
       qw(TARGET  ALTTARGET IMGTARGET MESSAGE NAME   INSTITUTION);
 # above  4       5         6         7       8      9
