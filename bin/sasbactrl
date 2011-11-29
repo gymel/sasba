@@ -225,7 +225,10 @@ if ( $action eq "init" ) {
 
 Interface to the C<listCollections> method.
 
-List all loaded beacon file with identifier counts.
+List all loaded beacon files with identifier counts.
+
+The optional parameter may specify a SQL-Pattern to restrict
+the result.
 
 =cut
 

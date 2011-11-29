@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_55";
+our $VERSION = "0.2_58";
 
 =head1 NAME
 
@@ -323,6 +323,8 @@ Hashref with the following configuration directives
 
   redirect_300 => CGI 'format' parameter to be used in HTML content (eg. format=sources)
 
+  force_single => Only regard the first hit (thus always redirect)
+
 =item $query
 
 Identifier to be queried
@@ -339,7 +341,7 @@ sub redirect {          # Liste der Beacon-Header fuer Treffer oder einfaches re
   my %headerdefaults = (               -type => ($formatprops->{'type'} || 'text/html'),
 #      ($formatprops->{'charset'} ? (-charset =>  $formatprops->{'charset'}) : ()),
                                      -charset => ($formatprops->{'charset'} || 'UTF-8'),
-                                    -expires => ($server->{'expires'} || '+1d'),
+                                    -expires => ($server->{'expires'} || '+1h'),
     );
 
   my ($hash, $pretty, $canon) = $self->prepare_query($query);
@@ -356,6 +358,7 @@ sub redirect {          # Liste der Beacon-Header fuer Treffer oder einfaches re
       return "";
     };
 
+  my $clause = $formatprops->{force_single} ? "LIMIT 1" : "ORDER BY repos.sort, repos.alias";
   my (  $tfield,$afield,  $gfield,  $mfield,$nfield,$ifield) = map{ scalar $self->beaconfields($_) } 
       qw(TARGET  ALTTARGET IMGTARGET MESSAGE NAME   INSTITUTION);
 # above  4       5         6         7       8      9
@@ -367,7 +370,7 @@ SELECT beacons.altid, beacons.hits, beacons.info, beacons.link,
        repos.alias
   FROM beacons NATURAL LEFT JOIN repos
   WHERE beacons.hash=? 
-  ORDER BY repos.sort, repos.alias;
+  $clause;
 XxX
   $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   my @rawres;
