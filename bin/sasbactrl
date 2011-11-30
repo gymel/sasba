@@ -846,15 +846,36 @@ sub refreshOSD {    #
 
     print " ... Examples from Sources" if $verbose;
     $db->clearOSD("Examples");
-    my %known;
+    my (%seen, %covered);
     my $explref = $db->RepoCols("EXAMPLES");
-    foreach ( values %$explref ) {
-        next unless defined $_;
+    foreach my $sq ( sort {$b <=> $a} keys %$explref ) {
+        my $expl = $explref->{$sq};
+        next unless defined $expl;
         my $cnt = 0;
-        foreach my $id ( sort map { $_ ? $_ : () } split(/\s*\|\s*/, $_) ) {
-            next if $known{$id}++;	
-            $db->addOSD("Examples", $id);
-            last if $cnt++ > 1;
+        foreach my $id ( sort {$b cmp $a} map { $_ ? $_ : () } split(/\s*\|\s*/, $expl) ) {
+            my ($normid, @sequences) = $db->idList($id);
+            if ( $normid ) {   # flush iterator
+                warn "assertion failed (examples from seqno $sq): multiple lists for $id" while $db->idList();
+              }
+            else {
+                print "\n\t[normalizing example $id for seqno $sq failed!]\n";
+                $db->addOSD("Examples", "$id");
+                next;
+              };
+#warn "$sq: $id already seen" if $seen{$normid};
+            next if $seen{$normid}++;
+            my ($i, $j, $new) = (0, 0, 0);
+            foreach my $seqref ( @sequences ) {
+                $i ++;
+                $j += ($seqref->[1] || 1);
+                next if $covered{$seqref->[0]};
+#warn "$sq: yet uncovered $seqref->[0] for $id/$normid";
+                $new = $covered{$seqref->[0]} = 1;
+              };
+#warn "$sq: all covered for $id/$normid" unless $new;
+            next unless $new;
+            $db->addOSD("Examples", "$id|$i/$j");
+            last;
          };
       };
 
@@ -874,7 +895,7 @@ sub refreshOSD {    #
       };
     while ( $i ) {
         print " ($i)" if $verbose;
-        $known{$eref->{id}} || $db->addOSD("Examples", $eref->{id}."|".$eref->{response});
+        $seen{$eref->{id}} || $db->addOSD("Examples", $eref->{id}."|".$eref->{response});
         $i = $EXAMPLEGOAL if $EXAMPLEGOAL and ($i > $EXAMPLEGOAL);
         ($eref =     $db->findExample($i,  10, $sthcache)) ? $db->addOSD("Examples", $eref->{id}."|".$eref->{response})
                                                   : (($eref = $db->findExample($i, 1, $sthcache)) && $db->addOSD("Examples", $eref->{id}."|".$eref->{response}),
