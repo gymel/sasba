@@ -12,6 +12,20 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
+##### Compatibility
+use SeeAlso::Identifier::GND;
+if ( $SeeAlso::Identifier::GND::VERSION eq "0.54" ) {
+    no strict;
+    eval <<'XxX' or die "tweak failed: $@";
+#!!! Have to tweak internals of SeeAlso::Identifier::GND for successful operation !!!
+    *SeeAlso::Identifier::GND::canonical = \&SeeAlso::Identifier::GND::normalized;
+    *SeeAlso::Identifier::GND::hash = \&SeeAlso::Identifier::GND::indexed;
+#!!! !!!#
+XxX
+}
+#####
+
+
 my $verbose = 1;
 my $ignore_header_errors = 0;
 my $action = "list";
