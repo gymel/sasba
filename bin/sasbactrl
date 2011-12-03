@@ -855,11 +855,12 @@ sub refreshOSD {    #
         foreach my $id ( sort {$b cmp $a} map { $_ ? $_ : () } split(/\s*\|\s*/, $expl) ) {
             my ($normid, @sequences) = $db->idList($id);
             if ( $normid ) {   # flush iterator
-                warn "assertion failed (examples from seqno $sq): multiple lists for $id" while $db->idList();
+                warn "assertion failed (examples from seqno $sq): multiple lists for $id" while $db->idList(); # Flush iterator
               }
             else {
-                print "\n\t[normalizing example $id for seqno $sq failed!]\n";
+                print "\n\t[normalizing example >$id< for seqno $sq failed!]\n";
                 $db->addOSD("Examples", "$id");
+                warn "assertion failed (examples from seqno $sq): multiple lists for $id" while $db->idList(); # Flush iterator
                 next;
               };
 #warn "$sq: $id already seen" if $seen{$normid};

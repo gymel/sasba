@@ -47,4 +47,4 @@ requires:
   perl: v5.8.2
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.2_59
+version: 0.2_60
