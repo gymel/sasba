@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_59';
+    $VERSION     = '0.2_60';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -1525,17 +1525,21 @@ if finished.
 
 Hits, Info, Link and AltId are normalized to the empty string if undefined (or < 2 for hits).
 
+It is important to finish all iterations before calling this method for "new" arguments:
+
+ 1 while $db->idList();  # flush pending results
 
 =cut
 
 sub idList {
   my ($self, $pattern) = @_;
-  my $cond = $pattern ? qq!WHERE hash LIKE "$pattern"! : "";
+  my $cond = $pattern ? ($pattern =~ /%/ ? "WHERE hash LIKE ?" : qq"WHERE hash=?")
+                      : "";
   unless ( $self->{_iterator_idList_handle} ) {
       my $sth = $self->stmtHdl(<<"XxX");
 SELECT hash, seqno, hits, info, link, altid FROM beacons $cond ORDER BY hash, seqno, altid;
 XxX
-      $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
+      $sth->execute(($pattern ? ($pattern) : () )) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $self->{_iterator_idList_handle} = $sth;
       $self->{_iterator_idList_crosscheck} = $self->RepoCols("ALTTARGET");
       $self->{_iterator_idList_prefetch} = undef;
