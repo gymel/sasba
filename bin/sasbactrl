@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# Version 0.2_59
+# Version 0.2_61
 # $Id$
 use lib "./lib";
 use strict;
@@ -687,7 +687,7 @@ elsif ( $action eq "loadmeta" ) {
      open(TPL, "<:utf8", $tplfile) or die "cannot open template file $tplfile";
      my ($didosd, $didmeta) = (0, 0);
      while ( <TPL> ) {
-         if ( /^#([A-Z-]+):\s*(.*)$/ ) {
+         if ( /^#([A-Z][A-Z0-9-]*):\s*(.*)$/ ) {
              my ($key, $val) = ($1, $2);
              unless ( $didmeta ++ ) {
                  $db->clearBeaconMeta($_) foreach $db->beaconfields()};

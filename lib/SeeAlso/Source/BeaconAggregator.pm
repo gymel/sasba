@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_60';
+    $VERSION     = '0.2_61';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -588,7 +588,7 @@ sub mkConstraint {
 
 =head3 OSDValues ( [ $key ] ) 
 
-Returns a hashref containing the OpenSearchDescription keywords an their
+Returns a hashref containing the OpenSearchDescription keywords and their
 respective values.
 
 =cut

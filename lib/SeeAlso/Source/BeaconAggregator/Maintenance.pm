@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_60';
+    $VERSION     = '0.2_61';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -170,7 +170,7 @@ concerning the collection as such, notably the values needed for
 the Open Search Description and the Header fields needed in case
 of publishing a beacon file for this collection.
 
-The I<osd> admin table stores (unique) C<key>, C<val> pairs for 
+The I<admin> table stores (unique) C<key>, C<val> pairs for 
 general persistent data. Currently the following keys are defined:
 
 =over 8
@@ -459,7 +459,7 @@ sub loadFile {
             };
         };
       if ( not defined $collno ) {      # $collno used as flag: "still in header"
-          if ( /^#\s*(\w+):\s*(.*)$/ ) {
+          if ( /^#\s*([A-Z][\w-]*):\s*(.*)$/ ) {
               $headerseen++;
               my ($field, $data) = ($1, $2);
               $field =~ s/^DATE$/TIMESTAMP/ && print "WARNING: corrected DATE to TIMESTAMP in Beacon-Header [$showme l.$.]\n";

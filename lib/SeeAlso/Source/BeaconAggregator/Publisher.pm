@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_59";
+our $VERSION = "0.2_61";
 
 =head1 NAME
 
@@ -23,7 +23,8 @@ can be used as callbacks for SeeAlso::Server (replacing the default
 =cut
 
 our %Defaults = (
-    "REVISIT" => 86400,             # one day
+#   "REVISIT" => 86400,             # one day
+    "REVISIT" => undef,             # no default (leave empty unless otherwise set)
     "uAformatname" => "sources",
     "beaconformatname" => "beacon",
     "FORMAT"  => "BEACON",
@@ -252,6 +253,17 @@ XxX
       $val =~ s/\s+/ /g; $val =~ s/^\s+//; $val =~ s/\s+$//;
       push(@result, "#$_: $val\n");
     }
+
+# extract admin info of last transaction (i.e. last possible modification of underlying data)
+# alternatively: SELECT seqno, utime FROM repos WHERE seqno=(SELECT MAX(seqno) FROM repos);
+  my $laststh = $self->stmtHdl(<<"XxX");
+SELECT MAX(seqno), MAX(mtime) FROM repos;
+XxX
+  $laststh->execute() or croak("Could not execute >".$laststh->{Statement}."<: ".$laststh->errstr);
+  if ( my $aryref = $laststh->fetchrow_arrayref ) {
+      my ($sq, $ut) = @$aryref;
+      push(@result, "#X-REVISION: $sq [".SeeAlso::Source::BeaconAggregator::tToISO($ut)."]\n") if $sq;
+    };
 
 ## PND-BEACON
 #                CONTACT => ['VARCHAR(63)'],
