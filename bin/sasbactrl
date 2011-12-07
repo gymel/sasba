@@ -389,16 +389,22 @@ elsif ( $action eq "headers" ) {
 
 elsif ( $action eq "header" ) {
     my $seqno_or_alias = shift @ARGV or die "Please specify alias or number";
-    my $did = 0;
-    while ( scalar @ARGV && (my $field = shift @ARGV) ) {
-        my($key, $val) = split(/=/, $field, 2);
-        my($rows, @vals) = $db->headerfield($seqno_or_alias, $key, $val);
-        print "$key - @vals\n" if @vals && $verbose;
-        $did ++ if (defined $val) && $rows && (defined $vals[0]) && ($val ne $vals[0]);
-      };
-    if ( $did ) {
-        print "Changed $did fields for $seqno_or_alias\n";
-        refreshOSD(0);
+    if ( @ARGV ) {
+        my $did = 0;
+        while ( scalar @ARGV && (my $field = shift @ARGV) ) {
+            my($key, $val) = split(/=/, $field, 2);
+            my($rows, @vals) = $db->headerfield($seqno_or_alias, $key, $val);
+            print "$key - @vals\n" if @vals && $verbose;
+            $did ++ if (defined $val) && $rows && (defined $vals[0]) && ($val ne $vals[0]);
+          };
+        if ( $did ) {
+            print "Changed $did fields for $seqno_or_alias\n";
+            refreshOSD(0);
+          };
+      }
+    else {       # Simply dump a list of aliases
+       my($rows, @vals) = $db->headerfield($seqno_or_alias, "_alias");
+       print "@vals\n"
       };
   }
 
