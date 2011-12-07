@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_61";
+our $VERSION = "0.2_62";
 
 =head1 NAME
 
@@ -439,6 +439,14 @@ XxX
   else {
       print $cgi->header(-status => "300 Multiple Choices for identifier '$canon'",
                          %headerdefaults);
+# mod_perl overrides the header and adds a custom document at the end of everything
+# therefore we force the header out (a simple print "" does not suffice) and then can
+# safely reset the status to OK via CGI.pm leaking the Apache2::Request object
+      if ( my $r = sources->r ) {  
+          local($|) = 1;
+          print "\n";
+          $r->status(200);
+        };
     };
   my @result;
   push(@result, $cgi->start_html ( -title => "$hits References for $pretty",
@@ -713,7 +721,7 @@ XxX
 
       push(@result, qq!<div class="aggregator" id="ag$aos" style="display: none;">!);
       foreach ( sort keys %$repos ) {
-          next unless/^(FORMAT|PREFIX|REVISIT|VERSION)$/;
+          next unless /^(FORMAT|PREFIX|REVISIT|VERSION)$/;
           next unless $repos->{$_};
           push(@result, $cgi->p({class=>"bc_$_"}, $cgi->span("#$_:"), $repos->{$_}));
         };
