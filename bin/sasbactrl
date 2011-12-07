@@ -360,6 +360,10 @@ Interface to the C<headers> method.
 
 Prints all OSD fields and then all beacon fields.
 
+The first argument is a sequence number, alias or pattern.
+
+See C<header> for restricting output to individual fields.
+
 =cut
 
 elsif ( $action eq "headers" ) {
@@ -383,7 +387,25 @@ elsif ( $action eq "headers" ) {
       };
   }
 
-=item header
+
+=item C<header>
+
+Interface to the C<headerfield> method.
+
+The first parameter is a mandatory and specifies a sequence number,
+alias or pattern (e.g. "C<%>") to operate on.
+
+Further arguments are of the form I<fieldname> or I<fieldname>=C<value>
+(value may be empty):
+For each of these arguments output a line consisting of the field name, " - "
+and the list of all values encountered. Subsequently, if the assignment form of the
+argument is given, the corresponding field is set to C<value> for all
+sequences met.
+
+Otherwise (no list of field names or assignments is specified), output will be
+a list of all I<alias> fields, roughly corresponding to C<headerfield "%" _alias>.
+
+See C<headers> for listing all fields defined for given sequences.
 
 =cut
 
@@ -782,8 +804,6 @@ elsif ( $action eq "deflate" ) {
     $db->deflate}
 else {
     pod2usage({-message => "Unsupported action '$action'", -exitval => 3})}
-
-
 
 
 =back
