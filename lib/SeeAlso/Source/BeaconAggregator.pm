@@ -706,6 +706,7 @@ sub tToISO {
 # URL-encode data
 sub urlpseudoescape {     # we don't do a thorough job here, because it is not clear whether 
                           # /a/b/c is a parameter ("/" must be encoded) or part of a path ("/" must not be encoded)
+                          # and we must avoid  URL-escaping already escaped content
                           # Therefore we only escape spaces and characters > 127
   local ($_) = @_;
   $_ = pack("C0a*", $_);  # Zeichen in Bytes zwingen
