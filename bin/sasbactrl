@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# Version 0.2_61
+# Version 0.2_63
 # $Id$
 use lib "./lib";
 use strict;
@@ -214,7 +214,9 @@ my $db = SeeAlso::Source::BeaconAggregator::Maintenance->new(
         $dbfile ? ('file' => $dbfile) : (),
         $dsn ? ('dsn' => $dsn) : (),
         $iclass ? ('identifierClass' => $iclass) : (),
-        'accept' => {'VERSION' => qr'0.1', 'FORMAT' => '^(PND-)?B(?i:EACON)$'},
+        'accept' => {
+		'VERSION' => qr'0\.[12]',
+		 'FORMAT' => '^([GP]ND-)?B(?i:EACON)$'},
         'verbose' => $verbose,
     ) or die "could not open database $dsn / $dbfile";
 

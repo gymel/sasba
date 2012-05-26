@@ -14,7 +14,7 @@ NAME
 
 DESCRIPTION
     This Module allows a collection of BEACON files (cf.
-    http://de.wikipedia.org/wiki/Wikipedia:PND/BEACON) to be used as
+    http://de.wikipedia.org/wiki/Wikipedia:BEACON) to be used as
     SeeAlso::Source (probably in the context of an SeeAlso::Server
     application). Therefore it implements the four methods documented in
     SeeAlso::Source

@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_61';
+    $VERSION     = '0.2_63';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -30,7 +30,7 @@ sasbactrl.pl - command line interface to SeeAlso::Source::BeaconAggregator and
 
 =head1 DESCRIPTION
 
-This Module allows a collection of BEACON files (cf. http://de.wikipedia.org/wiki/Wikipedia:PND/BEACON)
+This Module allows a collection of BEACON files (cf. http://de.wikipedia.org/wiki/Wikipedia:BEACON)
 to be used as SeeAlso::Source (probably in the context of an SeeAlso::Server application).
 Therefore it implements the four methods documented in SeeAlso::Source
 

@@ -3,29 +3,29 @@ require 5.008002;
 use ExtUtils::MakeMaker;
 WriteMakefile
 (
-          'PL_FILES' => {},
-          'INSTALLDIRS' => 'site',
           'NAME' => 'SeeAlso::Source::BeaconAggregator',
+          'VERSION_FROM' => 'lib/SeeAlso/Source/BeaconAggregator.pm',
+          'PREREQ_PM' => {
+                           'CGI' => '3.0',
+                           'Carp' => 0,
+                           'DBD::SQLite' => '1.25',
+                           'DBI' => '1.57',
+                           'File::Temp' => 0,
+                           'HTTP::Date' => '1.46',
+                           'HTTP::Request' => '1.40',
+                           'LWP::UserAgent' => '2.031',
+                           'SeeAlso::Identifier' => '0.46',
+                           'SeeAlso::Identifier::GND' => '0.54',
+                           'SeeAlso::Response' => '0.54',
+                           'SeeAlso::Server' => '0.57',
+                           'SeeAlso::Source' => '0.56',
+                           'Test::More' => '0.94',
+                           'URI::file' => '1.0'
+                         },
+          'INSTALLDIRS' => 'site',
           'EXE_FILES' => [
                            'bin/sasbactrl'
                          ],
-          'VERSION_FROM' => 'lib/SeeAlso/Source/BeaconAggregator.pm',
-          'PREREQ_PM' => {
-                           'DBD::SQLite' => '1.25',
-                           'CGI' => '3.0',
-                           'SeeAlso::Identifier' => '0.46',
-                           'URI::file' => '1.0',
-                           'SeeAlso::Response' => '0.54',
-                           'DBI' => '1.57',
-                           'SeeAlso::Identifier::GND' => '0.54',
-                           'SeeAlso::Source' => '0.56',
-                           'Carp' => 0,
-                           'HTTP::Date' => '1.46',
-                           'Test::More' => '0.94',
-                           'LWP::UserAgent' => '2.031',
-                           'File::Temp' => 0,
-                           'SeeAlso::Server' => '0.57',
-                           'HTTP::Request' => '1.40'
-                         }
+          'PL_FILES' => {}
         )
 ;
