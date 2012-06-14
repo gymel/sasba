@@ -1,5 +1,10 @@
 Revision history for Perl module SeeAlso::Source::BeaconAggregator
 
+0.02_64 2012-06-14
+    - autoIdentifier
+    - be careful: new() for the blessed-scalar identifier classes 
+      usually does not return a true value
+
 0.02_57 2011-09-14
     - aliasfilter
     - TODO: analyze conflicting identifier classes

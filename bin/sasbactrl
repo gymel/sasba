@@ -203,7 +203,8 @@ if ( $itype ) {
       };
     if ( $@ ) {
         die "sorry: Identifier Class $package cannot be imported\n$@"};
-    $iclass = $package->new();
+    $iclass = $package->new();    # don't test the outcome (blessed scalar!)
+    die "sorry: cannot setup instance for Identifier Class $package" unless defined $iclass;
   }
 else {
     # $iclass = SeeAlso::Identifier->new();   # don't set, let it auto-initialize
@@ -213,7 +214,7 @@ my $db = SeeAlso::Source::BeaconAggregator::Maintenance->new(
         'dbroot' => $dbroot,
         $dbfile ? ('file' => $dbfile) : (),
         $dsn ? ('dsn' => $dsn) : (),
-        $iclass ? ('identifierClass' => $iclass) : (),
+        ref($iclass) ? ('identifierClass' => $iclass) : (),
         'accept' => {
 		'VERSION' => qr'0\.[12]',
 		 'FORMAT' => '^([GP]ND-)?B(?i:EACON)$'},

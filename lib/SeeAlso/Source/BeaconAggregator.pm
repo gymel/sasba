@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_63';
+    $VERSION     = '0.2_64';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -650,6 +650,41 @@ sub admhash {
   return \%adm;
 }
 
+
+=head3 autoIdentifier () 
+
+Initializes a missing C<identifierClass> from the IDENTIFIER_CLASS entry in the admin table.
+
+=cut
+
+sub autoIdentifier {
+  my ($self) = @_;  
+
+  return $self->{identifierClass} if exists $self->{identifierClass} && ref($self->{identifierClass});
+
+  my $admich =  $self->stmtHdl("SELECT key, val FROM admin WHERE key=?;")
+          or croak("Could not prepare statement (dump admin table)".$self->{dbh}->errstr);
+  $admich->execute('IDENTIFIER_CLASS') or croak("Could not execute statement (IDENTIFIER_CLASS from admin table): ".$admich->errstr);
+  my %adm = ();
+  while ( my $onerow = $admich->fetchrow_arrayref() ) {
+      if ( $admich->err ) {
+          croak("Could not iterate through admin table: ".$admich->errstr)};
+      my ($key, $val) = @$onerow;
+      $adm{$key} = $val || "";
+    };
+
+  if ( my $package = $adm{"IDENTIFIER_CLASS"} ) {
+      eval {
+          (my $pkgpath = $package) =~ s=::=/=g;  # require needs path...
+          require "$pkgpath.pm";
+          import $package;
+        };
+      if ( $@ ) {
+         croak "sorry: Identifier Class $package cannot be imported\n$@"};
+      return $self->{identifierClass} = $package->new();
+    };
+  return undef;
+}
 
 
 =head3 findExample ( $goal, $offset, [ $sth ])

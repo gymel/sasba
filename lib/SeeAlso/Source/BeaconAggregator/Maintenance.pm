@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_63';
+    $VERSION     = '0.2_64';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -300,7 +300,7 @@ XxX
 
   unless ( exists $options{'identifierClass'} ) {
       $options{'identifierClass'} = $self->{'identifierClass'} if exists $self->{'identifierClass'};
-    };
+   };
 
   my $ickey = "IDENTIFIER_CLASS";
   if ( (exists $options{identifierClass}) and (my $wanttype = ref($options{identifierClass})) ) {
@@ -410,19 +410,9 @@ sub loadFile {
     }
 
   unless ( defined $self->{identifierClass} ) {
-      my $admref = $self->admhash();
-      if ( my $package = $admref->{"IDENTIFIER_CLASS"} ) {
-          print "Assuming identifiers of type $package\n" if $options{'verbose'};
-          eval {
-              (my $pkgpath = $package) =~ s=::=/=g;  # require needs path...
-              require "$pkgpath.pm";
-              import $package;
-            };
-          if ( $@ ) {
-             croak "sorry: Identifier Class $package cannot be imported\n$@"};
-          $self->{identifierClass} = $package->new();
-        };
-    }
+      my $package = $self->autoIdentifier();
+      $options{'verbose'} && ref($package) && print "Assuming identifiers of type ".ref($package)."\n";
+    };
 
   my $mtime = (stat(_))[9];
   open(BKN, "<:utf8", $file) or (print "ERROR: cannot read $file\n", return undef);
@@ -1498,6 +1488,10 @@ SELECT hash, COUNT($count_what), SUM(hits) FROM beacons $cond GROUP BY hash ORDE
 XxX
       $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $self->{_iterator_idCounts} = $sth;
+      unless ( defined $self->{identifierClass} ) {
+          my $package = $self->autoIdentifier();
+          $options{'verbose'} && ref($package) && print "Assuming identifiers of type ".ref($package)."\n";
+        }
     };
   my $onerow = $self->{_iterator_idCounts}->fetchrow_arrayref;
   unless ( $onerow ) {
@@ -1543,6 +1537,7 @@ XxX
       $self->{_iterator_idList_handle} = $sth;
       $self->{_iterator_idList_crosscheck} = $self->RepoCols("ALTTARGET");
       $self->{_iterator_idList_prefetch} = undef;
+      $self->autoIdentifier() unless defined $self->{identifierClass};
     };
   unless ( exists $self->{_iterator_idList_prefetch} ) {   # deferred exit
       delete $self->{_iterator_idList_handle};
