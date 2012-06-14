@@ -149,11 +149,12 @@ sub beacon {
 
   print @$headerref;
 
+  my $c = (defined $self->{identifierClass}) ? $self->{identifierClass} : $self->autoIdentifier();
+
   my $sth = $self->stmtHdl(<<"XxX");
 SELECT hash, COUNT(DISTINCT seqno) FROM beacons GROUP BY hash ORDER BY hash;
 XxX
   $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
-  my $c = (defined $self->{identifierClass}) ? $self->{identifierClass} : undef;
   my $rows = 0;
   while ( my $row = $sth->fetchrow_arrayref ) {
       $rows++;

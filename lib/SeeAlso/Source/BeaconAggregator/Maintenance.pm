@@ -1490,7 +1490,7 @@ XxX
       $self->{_iterator_idCounts} = $sth;
       unless ( defined $self->{identifierClass} ) {
           my $package = $self->autoIdentifier();
-          $options{'verbose'} && ref($package) && print "Assuming identifiers of type ".ref($package)."\n";
+          $options{'verbose'} && ref($package) && carp "Assuming identifiers of type ".ref($package)."\n";
         }
     };
   my $onerow = $self->{_iterator_idCounts}->fetchrow_arrayref;
