@@ -444,7 +444,7 @@ XxX
 # mod_perl overrides the header and adds a custom document at the end of everything
 # therefore we force the header out (a simple print "" does not suffice) and then can
 # safely reset the status to OK via CGI.pm leaking the Apache2::Request object
-      if ( my $r = sources->r ) {  
+      if ( my $r = $sources->r ) {  
           local($|) = 1;
           print "\n";
           $r->status(200);
