@@ -8,6 +8,7 @@ lib/SeeAlso/Source/BeaconAggregator/Publisher.pm
 LICENSE
 Makefile.PL
 MANIFEST
+META.json
 META.yml
 README
 t/001_load.t

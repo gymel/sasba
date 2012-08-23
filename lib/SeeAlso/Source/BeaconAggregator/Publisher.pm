@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_64";
+our $VERSION = "0.2_66";
 
 =head1 NAME
 
@@ -547,14 +547,19 @@ XxX
   my $target = $cgi->url(-path=>1);
 
   my @result;
-  push(@result, $cgi->start_html( -xhtml => 1,
-                               -encoding => "UTF-8",
-                                  -title => "$servicename referring ".$query->as_string(),
-                                   -meta => {'robots'=>'noindex'},
-              ($extra->{'css'} ? (-style =>{'src'=>$extra->{'css'}}) : ()),
-                                   -head =>[$cgi->Link({-rel=>'unapi-server', -type=>'application/xml', title=>'unAPI', -href=>$target}),
-                                            $cgi->Link({-rel=>'start', -href=>$target})],
-                                 ));
+  push(@result, $cgi->start_html(
+                     -encoding => "UTF-8",
+                        -title => "$servicename referring ".$query->as_string(),
+                         -meta => {'robots'=>'noindex'},
+    ($extra->{'css'} ? (-style => {'src'=>$extra->{'css'}}) : ()),
+                         -head => [$cgi->Link({-rel=>'unapi-server',
+                                              -type=>'application/xml',
+                                              title=>'unAPI',
+                                              -href=>$target}),
+                                   $cgi->Link({-rel=>'start',
+                                              -href=>$target}),
+                                  ],
+             ));
 
   push(@result, '<script type="text/javascript">function toggle(divid) {if ( document.getElementById(divid).style.display == "none" ) {document.getElementById(divid).style.display = "block"} else {document.getElementById(divid).style.display = "none"}}</script>');
   push(@result, '<script type="text/javascript">function mtoggle(dlid,cl) {var nd=document.getElementById(dlid).firstChild; while (nd!=null){if (nd.nodeType == 1) {if (nd.className==cl) {if (nd.style.display == "none"){nd.style.display = "block"}else{nd.style.display = "none"}}};nd=nd.nextSibling;};}</script>');
@@ -610,6 +615,7 @@ XxX
     };
 # Grouping done, now display...
 
+  my %didalreadysee;
   foreach my $groupref ( @groups ) {
       my ($repos, $meta, @vary) = @$groupref;
 
@@ -635,6 +641,7 @@ XxX
               $uri = sprintf($repos->{'ALTTARGET'}, $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
           elsif ( $repos->{'TARGET'} ) {
               $uri = sprintf($repos->{'TARGET'}, $pretty)};
+          my $redundant = ($didalreadysee{$uri}++) ? "subsequent" : "";
 
           my $guri = "";
           if ( $repos->{'IMGTARGET'} ) {
@@ -649,7 +656,7 @@ XxX
 
           push(@result, $cgi->a({style=>"float: right; clear: right;", href=>$uri}, $cgi->img({alt=>$vary->{'info'}||$label,src=>$guri}))) if $guri;
 
-          push(@result, $cgi->h2({class=>"label", id=>"head$aos"}, $cgi->a({href=>$uri}, $label)));
+          push(@result, $cgi->h2({class=>"label $redundant", id=>"head$aos"}, $cgi->a({href=>$uri}, $label)));
 
           push(@result, qq!<div class="synopsis" id="syn$aos">!);
           push(@result, $cgi->span($vary->{'info'})) if $vary->{'info'};
@@ -682,6 +689,7 @@ XxX
                   $uri = sprintf($repos->{'ALTTARGET'}, $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
               elsif ( $repos->{'TARGET'} ) {
                   $uri = sprintf($repos->{'TARGET'}, $pretty)};
+              my $redundant = ($didalreadysee{$uri}++) ? "subsequent" : "";
 
               my $guri = "";
               if ( $repos->{'IMGTARGET'} ) {
@@ -689,8 +697,7 @@ XxX
 
               my $hits = $vary->{hits} if $vary->{hits} and $vary->{hits} != 1;
 
-
-              push(@result, qq!<dt class="synopsis" id="syn$aos-$cnt">!);
+              push(@result, qq!<dt class="synopsis $redundant" id="syn$aos-$cnt">!);
               push(@result, $cgi->div({style=>"float: right;"}, $cgi->a({href=>$uri}, $cgi->img({src=>$guri})))) if $guri;
               push(@result, $cgi->a({href=>$uri}, $cgi->span($vary->{'info'} || "[$cnt.]")));
               push(@result, $cgi->span("($hits Treffer)")) if $hits;
