@@ -65,7 +65,7 @@ subtest 'admin hash: DATA_VERSION' => sub {
 	plan tests => 3;
 	ok($admhash = $use1->admhash(), 'get admin hash');
 	is(ref($admhash), 'HASH', 'correct type of admin hash');
-	is($admhash->{'DATA_VERSION'}, 1, 'correct DATA_VERSION');
+	is($admhash->{'DATA_VERSION'}, 2, 'correct DATA_VERSION');
 };
 
 # fix identifier version

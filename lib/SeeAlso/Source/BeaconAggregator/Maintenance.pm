@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_66';
+    $VERSION     = '0.2_67';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -235,6 +235,7 @@ XxX
 
 # Faciliate lookups
   $hdl->do("CREATE INDEX IF NOT EXISTS lookup ON beacons(hash);") or croak("Setup error: ".$hdl->errstr);
+  $hdl->do("CREATE INDEX IF NOT EXISTS redir ON beacons(altid);") or croak("Setup error: ".$hdl->errstr);
 # maintenance and enforce constraints
   $hdl->do("CREATE UNIQUE INDEX IF NOT EXISTS mntnce ON beacons(seqno, hash, altid);") or croak("Setup error: ".$hdl->errstr);
 
@@ -286,6 +287,7 @@ XxX
         # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
         # ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("REMARK");
         # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
+          $hdl->do("CREATE INDEX IF NOT EXISTS redir ON beacons(altid);") or croak("Setup error: ".$hdl->errstr);
         };
       $hdl->do("ANALYZE;");
     }

@@ -222,7 +222,7 @@ subtest 'listCollections' => sub {
 subtest 'admin' => sub {
 	plan tests => 5;
 	my $expected = { # key, value
-	    DATA_VERSION => 1,
+	    DATA_VERSION => 2,
 #	    IDENTIFIER_TYPE => "",
 	  };
 	my $admref = $use->admin();

@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_66";
+our $VERSION = "0.2_67";
 
 =head1 NAME
 
@@ -371,45 +371,81 @@ sub redirect {          # Liste der Beacon-Header fuer Treffer oder einfaches re
       return "";
     };
 
+  my $clusterid;
+  if ( $self->{cluster} ) {
+      my $clusterh = $self->stmtHdl("SELECT beacons.altid FROM cluster.beacons WHERE beacons.hash=? OR beacons.altid=? LIMIT 1;");
+      $clusterh->execute($hash, $hash);
+      while ( my $onerow = $clusterh->fetchrow_arrayref() ) {
+          $clusterid = $onerow->[0];}
+    }
+
   my $clause = $extra->{force_single} ? "LIMIT 1" : "ORDER BY repos.sort, repos.alias";
   my (  $tfield,$afield,  $gfield,  $mfield,$nfield,$ifield) = map{ scalar $self->beaconfields($_) } 
       qw(TARGET  ALTTARGET IMGTARGET MESSAGE NAME   INSTITUTION);
-# above  4       5         6         7       8      9
-# below        0              1             2             3
-#            10
-  my $sth = $self->stmtHdl(<<"XxX");
-SELECT beacons.altid, beacons.hits, beacons.info, beacons.link,
+# above  5       6         7         8       9      10
+# below        0              1             2             3       4
+#            11
+  my $sth;
+  if ( $clusterid ) {  # query IN cluster
+      $sth = $self->stmtHdl(<<"XxX");
+SELECT beacons.hash, beacons.altid, beacons.hits, beacons.info, beacons.link,
+       repos.$tfield, repos.$afield, repos.$gfield, repos.$mfield, repos.$nfield, repos.$ifield,
+       repos.alias
+  FROM beacons NATURAL LEFT JOIN repos
+  WHERE ( (beacons.hash=?)
+       OR (beacons.hash IN (SELECT cluster.beacons.hash FROM cluster.beacons WHERE cluster.beacons.altid=?)) )
+  $clause;
+XxX
+      $sth->execute($clusterid, $clusterid) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
+    }
+  else {
+      $sth = $self->stmtHdl(<<"XxX");
+SELECT beacons.hash, beacons.altid, beacons.hits, beacons.info, beacons.link,
        repos.$tfield, repos.$afield, repos.$gfield, repos.$mfield, repos.$nfield, repos.$ifield,
        repos.alias
   FROM beacons NATURAL LEFT JOIN repos
   WHERE beacons.hash=? 
   $clause;
 XxX
-  $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
+      $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
+    }
+
+  my $c = $self->{identifierClass} || undef;
   my @rawres;
   while ( my $onerow = $sth->fetchrow_arrayref ) {
-      next if $onerow->[10] && exists $self->{'aliasfilter'}->{$onerow->[10]};
-      my $uri = $onerow->[3];         # Evtl. Expliziter Link
+      next if $onerow->[11] && exists $self->{'aliasfilter'}->{$onerow->[11]};
+      my $uri = $onerow->[4];         # Evtl. Expliziter Link
       my $guri = "";
 
-      if ( $onerow->[0] ) {      # Konkordanzformat
-          $uri ||= sprintf($onerow->[5] || $onerow->[4], $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($onerow->[0]));
-          $guri = sprintf($onerow->[6], $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($onerow->[0])) if $onerow->[6];
+      my $h = $onerow->[0];
+      my $p;
+      if ( $h eq $hash ) {
+          $p = $pretty}
+      elsif ( $clusterid && ref($c) ) {
+          $c->value("");
+          my $did = $c->hash($h) || $c->value($h) || $h;
+          $p = $c->can("pretty") ? $c->pretty() : $c->value();
+        };
+      $p = ($clusterid ? $h : $pretty) unless defined $p;
+
+      if ( $onerow->[1] ) {      # Konkordanzformat
+          $uri ||= sprintf($onerow->[6] || $onerow->[5], $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($onerow->[1]));
+          $guri = sprintf($onerow->[7], $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($onerow->[1])) if $onerow->[7];
         }
-      elsif ( $onerow->[4] ) {                    # normales Beacon-Format
-          $uri = sprintf($onerow->[4], $pretty);
-          $guri = sprintf($onerow->[6], $pretty) if $onerow->[6];
+      elsif ( $onerow->[5] ) {                    # normales Beacon-Format
+          $uri ||= sprintf($onerow->[5], $p);
+          $guri = sprintf($onerow->[7], $p) if $onerow->[7];
         };
       next unless $uri;
 
 #                       #NAME         #INSTITUTION  _alias
       my $label;
-      if ( $label = $onerow->[7] ) { #MESSAGE 
-          $label = sprintf($label, $onerow->[1] || "...")}
-      elsif ( $label = $onerow->[8] || $onerow->[9] || $onerow->[10] || "???" ) {
-          $label .= " (".$onerow->[0].")" if $onerow->[0]}
+      if ( $label = $onerow->[8] ) { #MESSAGE 
+          $label = sprintf($label, $onerow->[2] || "...")}
+      elsif ( $label = $onerow->[9] || $onerow->[10] || $onerow->[11] || "???" ) {
+          $label .= " (".$onerow->[1].")" if $onerow->[1]}
 
-      push(@rawres, [$uri, $guri, $label, $onerow->[10], $onerow->[2]]);
+      push(@rawres, [$uri, $guri, $label, $onerow->[11], $onerow->[3]]);
     };
   my $hits = scalar @rawres;
 
@@ -533,10 +569,52 @@ sub sources {          # Liste der Beacon-Header fuer Treffer
       return "";
     };
 
-  my $countsth = $self->stmtHdl(<<"XxX");
+  my ($clusterid, %idlist);
+  my $c = $self->{identifierClass} || undef;
+  if ( $self->{cluster} ) {
+      my $clusterh = $self->stmtHdl("SELECT beacons.hash, beacons.altid FROM cluster.beacons WHERE beacons.hash=? OR beacons.altid=? LIMIT 1;");
+      $clusterh->execute($hash, $hash) or croak("Could not execute >".$clusterh->{Statement}."<: ".$clusterh->errstr);
+      while ( my $onerow = $clusterh->fetchrow_arrayref() ) {
+          $clusterid = $onerow->[1];
+          my $h = $onerow->[0];
+          if ( $c ) {
+              $c->value("");
+              my $did = $c->hash($h) || $c->value($h);
+              my $p = $c->can("pretty") ? $c->pretty() : $c->value();
+              $idlist{$p} = "";
+            }
+           else {
+              $idlist{$h} = "";
+            }
+        };
+      $idlist{$pretty} = "queriedid";
+      if ( $clusterid eq $hash ) {
+          $idlist{$pretty} .= " preferredid"}
+      elsif ( $c ) {
+          $c->value("");
+          my $did = $c->hash($clusterid) || $c->value($clusterid);
+          my $p = $c->can("pretty") ? $c->pretty() : $c->value();
+          $idlist{$p} = "variantid preferredid";
+        }
+       else {
+          $idlist{$clusterid} = "variantid preferredid";
+        }
+    }
+
+  my $countsth;
+  if ( $clusterid ) {
+      $countsth = $self->stmtHdl(<<"XxX");
+SELECT COUNT(DISTINCT seqno) FROM beacons
+ WHERE ( (hash=?) OR (hash IN (SELECT beacons.hash FROM cluster.beacons WHERE cluster.beacons.altid=?)) );
+XxX
+      $countsth->execute($clusterid, $clusterid) or croak("Could not execute >".$countsth->{Statement}."<: ".$countsth->errstr);
+    }
+  else {
+      $countsth = $self->stmtHdl(<<"XxX");
 SELECT COUNT(DISTINCT seqno) FROM beacons WHERE hash=?;
 XxX
-  $countsth->execute($hash) or croak("Could not execute >".$countsth->{Statement}."<: ".$countsth->errstr);
+      $countsth->execute($hash) or croak("Could not execute >".$countsth->{Statement}."<: ".$countsth->errstr);
+    };
   my $hitsref = $countsth->fetchrow_arrayref;
   my $hits = $hitsref->[0] || 0;
 
@@ -568,19 +646,35 @@ XxX
 
   push(@result, '<div id="description">');
   push(@result, $cgi->p($cgi->span("Identifier:"), $cgi->a({href=>"$prefix$pretty"}, "$prefix$pretty"))) if $prefix;
+  # delete $idlist{$pretty} if $prefix;
+  push(@result, $cgi->p($cgi->span("Variant Identifiers:"), map {$cgi->span({class=>($idlist{$_} || "variantid")}, $_)} sort keys %idlist)) if %idlist;
   push(@result, '</div>');
 
-  my $sth = $self->stmtHdl(<<"XxX");
+  my $srcsth;
+  if ( $clusterid ) {
+      $srcsth = $self->stmtHdl(<<"XxX");
+SELECT beacons.*, repos.*
+  FROM beacons NATURAL LEFT JOIN repos
+  WHERE ( (beacons.hash=?)
+       OR (beacons.hash IN (SELECT beacons.hash FROM cluster.beacons WHERE cluster.beacons.altid=?)) )
+  ORDER BY repos.sort, repos.alias;
+XxX
+      $srcsth->execute($clusterid, $clusterid) or croak("Could not execute >".$srcsth->{Statement}."<: ".$srcsth->errstr);
+    }
+  else {
+      $srcsth = $self->stmtHdl(<<"XxX");
 SELECT beacons.*, repos.*
   FROM beacons NATURAL LEFT JOIN repos
   WHERE beacons.hash=? 
   ORDER BY repos.sort, repos.alias;
 XxX
-  $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
+      $srcsth->execute($hash) or croak("Could not execute >".$srcsth->{Statement}."<: ".$srcsth->errstr);
+    }
+
   my $rows = 0;
   push(@result, '<div id="results">');
   my ($lastseq, @groups) = (0, ());
-  while ( my $onerow = $sth->fetchrow_hashref ) {
+  while ( my $onerow = $srcsth->fetchrow_hashref ) {
       $rows ++;
       if ( $lastseq and $onerow->{'seqno'} == $lastseq ) {
           my %vary;
@@ -634,18 +728,32 @@ XxX
 
           my $hits = $vary->{'hits'};
           my $description = $hits;
+
+          my $h = $vary->{'hash'};
+          my $variantid = ($h eq $hash) ? "" : "variantid";
+          my $p;
+          if ( $h eq $hash ) {
+              $p = $pretty}
+          elsif ( $clusterid && ref($c) ) {
+              $c->value("");
+              my $did = $c->hash($h) || $c->value($h) || $h;
+              $p = $c->can("pretty") ? $c->pretty() : $c->value();
+            };
+          $p = ($clusterid ? $h : $pretty) unless defined $p;
+
           my $uri = "???";
           if ( $uri = $vary->{'link'} ) {  # o.k.
             }
           elsif ( $repos->{'ALTTARGET'} && $vary->{'altid'} ) {
-              $uri = sprintf($repos->{'ALTTARGET'}, $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
+              $uri = sprintf($repos->{'ALTTARGET'}, $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
           elsif ( $repos->{'TARGET'} ) {
-              $uri = sprintf($repos->{'TARGET'}, $pretty)};
+              $uri = sprintf($repos->{'TARGET'}, $p)};
+
           my $redundant = ($didalreadysee{$uri}++) ? "subsequent" : "";
 
           my $guri = "";
           if ( $repos->{'IMGTARGET'} ) {
-              $guri = sprintf($repos->{'IMGTARGET'}, $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
+              $guri = sprintf($repos->{'IMGTARGET'}, $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
 
           my $rlabel =  $repos->{'MESSAGE'} || $repos->{'DESCRIPTION'} || $repos->{'NAME'} || $repos->{'INSTITUTION'} || "???";
           if ( $hits == 1 ) {
@@ -656,7 +764,7 @@ XxX
 
           push(@result, $cgi->a({style=>"float: right; clear: right;", href=>$uri}, $cgi->img({alt=>$vary->{'info'}||$label,src=>$guri}))) if $guri;
 
-          push(@result, $cgi->h2({class=>"label $redundant", id=>"head$aos"}, $cgi->a({href=>$uri}, $label)));
+          push(@result, $cgi->h2({class=>"label $redundant $variantid ident_$p", id=>"head$aos"}, $cgi->a({href=>$uri}, $label)));
 
           push(@result, qq!<div class="synopsis" id="syn$aos">!);
           push(@result, $cgi->span($vary->{'info'})) if $vary->{'info'};
@@ -668,6 +776,7 @@ XxX
           push(@result, $cgi->p({class=>"ht_guri"}, $cgi->span("Preview URL:"), $cgi->a({href=>$guri}, $guri))) if $guri;
           push(@result, $cgi->p({class=>"ht_hits"}, $cgi->span("Hits:"), $hits)) if $hits;
           push(@result, $cgi->p({class=>"ht_info"}, $cgi->span("Additional Info:"), $vary->{'info'})) if $vary->{'info'};
+          push(@result, $cgi->p({class=>"ht_idnote"}, $cgi->span("Variant Identifier:"), $p)) if $variantid;
           push(@result, '</div>');
         }
       else {
@@ -682,22 +791,35 @@ XxX
           foreach my $vary ( @vary ) {
               $cnt ++;
 
+              my $h = $vary->{'hash'};
+              my $variantid = ($h eq $hash) ? "" : "variantid";
+              my $p;
+              if ( $h eq $hash ) {
+                  $p = $pretty}
+              elsif ( $clusterid && ref($c) ) {
+                  $c->value("");
+                  my $did = $c->hash($h) || $c->value($h) || $h;
+                  $p = $c->can("pretty") ? $c->pretty() : $c->value();
+                };
+              $p = ($clusterid ? $h : $pretty) unless defined $p;
+
               my $uri = "???";
               if ( $uri = $vary->{'link'} ) {  # o.k.
                 }
               elsif ( $repos->{'ALTTARGET'} && $vary->{'altid'} ) {
-                  $uri = sprintf($repos->{'ALTTARGET'}, $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
+                  $uri = sprintf($repos->{'ALTTARGET'}, $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
               elsif ( $repos->{'TARGET'} ) {
-                  $uri = sprintf($repos->{'TARGET'}, $pretty)};
+                  $uri = sprintf($repos->{'TARGET'}, $p)};
+
               my $redundant = ($didalreadysee{$uri}++) ? "subsequent" : "";
 
               my $guri = "";
               if ( $repos->{'IMGTARGET'} ) {
-                  $guri = sprintf($repos->{'IMGTARGET'}, $pretty, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
+                  $guri = sprintf($repos->{'IMGTARGET'}, $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
 
               my $hits = $vary->{hits} if $vary->{hits} and $vary->{hits} != 1;
 
-              push(@result, qq!<dt class="synopsis $redundant" id="syn$aos-$cnt">!);
+              push(@result, qq!<dt class="synopsis $redundant $variantid ident_$p" id="syn$aos-$cnt">!);
               push(@result, $cgi->div({style=>"float: right;"}, $cgi->a({href=>$uri}, $cgi->img({src=>$guri})))) if $guri;
               push(@result, $cgi->a({href=>$uri}, $cgi->span($vary->{'info'} || "[$cnt.]")));
               push(@result, $cgi->span("($hits Treffer)")) if $hits;
@@ -708,9 +830,10 @@ XxX
               push(@result, $cgi->p({class=>"ht_guri"}, $cgi->span("Preview URL:"), $cgi->a({href=>$guri}, $guri))) if $guri;
               push(@result, $cgi->p({class=>"ht_hits"}, $cgi->span("Hits:"), $vary->{hits})) if $vary->{hits};
               push(@result, $cgi->p({class=>"ht_info"}, $cgi->span("Additional Info:"), $vary->{'info'})) if $vary->{'info'};
-              push(@result, '</dd>');
+              push(@result, $cgi->p({class=>"ht_idnote"}, $cgi->span("Variant Identifier:"), $p)) if $variantid;
               
               push(@result, '<div class="floatfinish"><!-- egal --></div>');
+              push(@result, '</dd>');
             };
           push(@result, qq!</dl>!);
         }

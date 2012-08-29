@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_66';
+    $VERSION     = '0.2_67';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -14,7 +14,7 @@ BEGIN {
 }
 
 use vars qw($DATA_VERSION);
-$DATA_VERSION = 1;
+$DATA_VERSION = 2;
 
 use SeeAlso::Response;
 use base ("SeeAlso::Source");
@@ -274,6 +274,22 @@ Hashref with options to be piped through to SeeAlso::Source
 
 Hashref with aliases to be filtered out from query results
 
+=item cluster
+
+dsn of a beacon source of identical identifier type giving a mapping (hash / altid)
+e.g. invalidated identifiers -> current identifiers.
+
+When the identifier supplied for query() is mentioned in this table, the query will be
+executed against the associated current identifier and all invalidated ones
+(backward translation of forward translation).
+
+When not (the mapping might not necessarily include the identiy mapping), 
+the query behaves as if no "cluster" was given.
+
+For translation between different identifier schemes before querying,
+use an appropriate SeeAlso::Identifier class.
+
+
 =back
 
 Returns undef if unable to DBI->connect() to the database.
@@ -315,6 +331,12 @@ sub new {
           });
   return undef unless $dbh;
   $self->{dbh} = $dbh;
+
+  if ( $self->{cluster} ) {
+      my $clusterfile = $self->{cluster}."/".$self->{cluster}."-db";
+      (substr($clusterfile, 0, 0) = $self->{dbroot}) if $self->{dbroot};
+      $dbh->do("ATTACH DATABASE '$clusterfile' AS cluster") or croak("error attaching cluster database '$clusterfile'");
+    };
 
   return $self;
 }
@@ -419,13 +441,35 @@ sub query {          # SeeAlso-Simple response
   my ($hash, $pretty, $canon) = $self->prepare_query($query);
   my $response = SeeAlso::Response->new($canon);    
 
+  my $clusterid;
+  if ( $self->{cluster} ) {
+      my $clusterh = $self->stmtHdl("SELECT beacons.altid FROM cluster.beacons WHERE beacons.hash=? OR beacons.altid=? LIMIT 1;");
+      $clusterh->execute($hash, $hash);
+      while ( my $onerow = $clusterh->fetchrow_arrayref() ) {
+          $clusterid = $onerow->[0];}
+    }
+
   my ($tfield, $afield, $mfield, $m1field, $msfield, $dfield, $nfield, $ifield)
     = map{ scalar $self->beaconfields($_) } 
 #        6      7         8       9          10          11          12   13
       qw(TARGET ALTTARGET MESSAGE ONEMESSAGE SOMEMESSAGE DESCRIPTION NAME INSTITUTION);
 #              0             1              2              3             4             5
 #            14          15
-  my $sth = $self->stmtHdl(<<"XxX");
+  my $sth;
+  if ( $clusterid ) {  # query IN cluster (leader id might not exist at LHS, therefore unionize with beacons.hash=$clusterid (!)
+      $sth = $self->stmtHdl(<<"XxX");
+SELECT beacons.hash, beacons.altid, beacons.seqno, beacons.hits, beacons.info, beacons.link,
+       repos.$tfield, repos.$afield, repos.$mfield, repos.$m1field, repos.$msfield, repos.$dfield, repos.$nfield, repos.$ifield,
+       repos.sort, repos.alias
+  FROM beacons NATURAL LEFT JOIN repos
+  WHERE ( (beacons.hash=?)
+       OR (beacons.hash IN (SELECT cluster.beacons.hash FROM cluster.beacons WHERE cluster.beacons.altid=?)) )
+  ORDER BY repos.sort, repos.alias;
+XxX
+      $sth->execute($clusterid, $clusterid) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
+    }
+  else {  # simple query
+      $sth = $self->stmtHdl(<<"XxX");
 SELECT beacons.hash, beacons.altid, beacons.seqno, beacons.hits, beacons.info, beacons.link,
        repos.$tfield, repos.$afield, repos.$mfield, repos.$m1field, repos.$msfield, repos.$dfield, repos.$nfield, repos.$ifield,
        repos.sort, repos.alias
@@ -433,7 +477,10 @@ SELECT beacons.hash, beacons.altid, beacons.seqno, beacons.hits, beacons.info, b
   WHERE beacons.hash=?
   ORDER BY repos.sort, repos.alias;
 XxX
-  $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
+      $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
+    }
+
+  my $c = $self->{identifierClass} || undef;
   my %didalready;
   while ( my $onerow = $sth->fetchrow_arrayref() ) {
 #      last unless defined $onerow->[0];           # strange end condition
@@ -441,13 +488,24 @@ XxX
 
       my $hits = $onerow->[3];
 
+      my $h = $onerow->[0];
+      my $p;
+      if ( $h eq $hash ) {
+          $p = $pretty}
+      elsif ( $clusterid && ref($c) ) {
+          $c->value("");
+          my $did = $c->hash($h) || $c->value($h) || $h;
+          $p = $c->can("pretty") ? $c->pretty() : $c->value();
+        };
+      $p = ($clusterid ? $h : $pretty) unless defined $p;
+
       my $uri;
       if ( $uri = $onerow->[5] ) {                # Expliziter Link
         }
       elsif ( $onerow->[1] && $onerow->[7] ) {    # Konkordanzformat
-          $uri = sprintf($onerow->[7], $pretty, urlpseudoescape($onerow->[1]))}
+          $uri = sprintf($onerow->[7], $p, urlpseudoescape($onerow->[1]))}
       elsif ( $onerow->[6] ) {                    # normales Beacon-Format
-          $uri = sprintf($onerow->[6], $pretty)};
+          $uri = sprintf($onerow->[6], $p)};
       next unless $uri;
 
       my $label =  $onerow->[8] || $onerow->[11] || $onerow->[12] || $onerow->[13] || "???";
