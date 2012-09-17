@@ -991,7 +991,7 @@ XxX
   $alias ||= $oalias || "";
 
   print "Requesting $uri\n" if $options{'verbose'};
-  my $rq = HTTP::Request->new('GET', $uri) or croak("could not construct request from $uri");
+  my $rq = HTTP::Request->new('GET', $uri, ['Accept' => 'text/*']) or croak("could not construct request from $uri");
   if ( $fetchtime && $modtime  && !$options{'force'} ) {   # allow force-reload by deleting _ftime or _mtime
       printf("  %-30s %s\n", "Old instance stamped", scalar localtime($modtime)) if $options{'verbose'};
       $rq->header('If-Modified-Since', HTTP::Date::time2str($modtime));
