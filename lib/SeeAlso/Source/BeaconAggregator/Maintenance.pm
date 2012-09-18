@@ -1703,7 +1703,7 @@ sub admin {
 
   my $admh = $self->stmtHdl("INSERT OR REPLACE INTO admin VALUES (?, ?);");
   $admh->execute($field, $value)
-       or croak("Could not execute update admin table: ".$admh->errstr);
+       or croak("Could not execute update to admin table: ".$admh->errstr);
   return defined($retval) ? $retval : "";
 }
 

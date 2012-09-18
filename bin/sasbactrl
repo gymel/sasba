@@ -31,7 +31,7 @@ my $ignore_header_errors = 0;
 my $action = "list";
 my $dbroot = "./beacondbs";
 my ($dsn, $cache_size);
-my ($distinct, $force, $quiet, $dbfile, $itype);
+my ($distinct, $force, $keeposd, $quiet, $dbfile, $itype);
 
 #  Application constants
 our $EXAMPLEGOAL = 50;              # don't try to find examples with higher hit count
@@ -55,6 +55,7 @@ Options:
 
   (--dbfile | --dsn )
   --force
+  --keeposd
   --verbose|--quiet
   --itype
   --dbroot     ($dbroot)
@@ -153,6 +154,7 @@ GetOptions (
   'quiet' => \$quiet,
   'distinct' => \$distinct,
   'force' => \$force,
+  'keeposd' => \$keeposd,
   'ignore-header-errors' => \$ignore_header_errors,
   'itype=s' => \$itype,
   'dbfile=s' => \$dbfile,
@@ -814,6 +816,10 @@ else {
 =cut
 
 sub refreshOSD {    # 
+    if ( $keeposd ) {
+        print "NOT refreshing OSD data\n" if $verbose;
+        return 0;
+      }
     my ($doexamples) = @_;
     my $anyref = $db->RepoCols();
     my $repcnt = scalar keys %$anyref;
@@ -992,7 +998,7 @@ sub policy {
   # 4. wait at least $RETRYWAIT before next attempt
   push(@xstat, [$st->{"utime"} +$RETRYWAIT, 'WAIT', sprintf("retry policy %.1fh", $RETRYWAIT/3600)]) if $st->{"utime"};
 
-  my ($forced, $xtime, $maxtime) = (0, 0);
+  my ($forced, $xtime, $maxtime) = (0, 0, 0);
   my @conds;
   foreach ( sort {$a->[0] <=> $b->[0]} @xstat ) {
       my($stamp, $code, $message) = @$_;
