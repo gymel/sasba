@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_70';
+    $VERSION     = '0.2_71';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -342,7 +342,7 @@ XxX
 
   my $rikey = "REDIRECTION_INDEX";
   if ( exists $options{prepareRedirs} or exists $admref->{$rikey} ) {
-      my $rihdl = $self->stmtHdl("INSERT INTO admin VALUES (?, ?);", "fix redirection index statement");
+      my $rihdl = $self->stmtHdl("INSERT OR REPLACE INTO admin VALUES (?, ?);", "fix redirection index statement");
       if ( $options{prepareRedirs} or ( $admref->{$rikey} and not exists $options{prepareRedirs} ) ) {
           print "creating redirection index\n" if $options{prepareRedirs} and $options{'verbose'};
           $hdl->do("CREATE INDEX IF NOT EXISTS redir ON beacons(altid,seqno);") or croak("Setup error: ".$hdl->errstr);

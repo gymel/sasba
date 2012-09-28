@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_70';
+    $VERSION     = '0.2_71';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -703,7 +703,7 @@ sub admhash {
       if ( $admh->err ) {
           croak("Could not iterate through admin table: ".$admh->errstr)};
       my ($key, $val) = @$onerow;
-      $adm{$key} = $val || "";
+      $adm{$key} = (defined $val) ? $val : "";
     };
   return \%adm;
 }

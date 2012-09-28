@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# Version 0.2_70
+# Version 0.2_71
 # $Id$
 use lib "./lib";
 use strict;
@@ -184,7 +184,6 @@ my %passopts = (
   ($distinct ? ( 'distinct' => $distinct) : ()),
   ($force ? ( 'force' => $force) : ()),
   ($verbose ? ( 'verbose' => $verbose) : ()),
-  ((defined $redirs) ? ( 'prepareRedirs' => $redirs) : ()),
   ($ignore_header_errors ? ( 'ignore-header-errors' => $ignore_header_errors) : ()),
 );
 
@@ -247,7 +246,9 @@ Creates a database with the necessary tables
 =cut
 
 if ( $action eq "init" ) {
-    $db->init() or die("could not setup database structure")}
+    $db->init(
+       ((defined $redirs) ? ( 'prepareRedirs' => $redirs) : ()),
+    ) or die("could not setup database structure")}
 
 =item C<list>
 
