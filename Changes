@@ -1,7 +1,14 @@
 Revision history for Perl module SeeAlso::Source::BeaconAggregator
 
+0.02_70 2012-09-28
+    - cluster property for new() method allows to specify a database
+      with identifiers to be considered equivalent
+    - this database shold be setup with "prepareRedirs" on init() 
+      [admin table property REDIRECTION_INDEX]
+
 0.02_64 2012-06-14
-    - autoIdentifier
+    - autoIdentifier method (creates object of class identifierClass,
+      or initializes from admin table property IDENTIFIER_CLASS)
     - be careful: new() for the blessed-scalar identifier classes 
       usually does not return a true value
 

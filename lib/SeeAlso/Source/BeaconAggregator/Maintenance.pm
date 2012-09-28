@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_69';
+    $VERSION     = '0.2_70';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -253,13 +253,9 @@ XxX
 
 # Faciliate lookups
   $hdl->do("CREATE INDEX IF NOT EXISTS lookup ON beacons(hash);") or croak("Setup error: ".$hdl->errstr);
-  $hdl->do("CREATE INDEX IF NOT EXISTS redir ON beacons(altid);") or croak("Setup error: ".$hdl->errstr);
 # maintenance and enforce constraints
+# (Problem: Dupes w/o altid but differing in link *and* info fields should be legitimate, too)
   $hdl->do("CREATE UNIQUE INDEX IF NOT EXISTS mntnce ON beacons(seqno, hash, altid);") or croak("Setup error: ".$hdl->errstr);
-
-# enforce constraints
-# $hdl->do("CREATE UNIQUE INDEX IF NOT EXISTS hshrepalt ON beacons(hash, seqno, altid);") or croak("Setup error: ".$hdl->errstr);
-# $hdl->do("DROP INDEX IF EXISTS hshrepalt;") or croak("Setup error: ".$hdl->errstr);
 
 # foreign key on cascade does not work?
 
@@ -305,7 +301,6 @@ XxX
         # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
         # ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("REMARK");
         # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
-        # $hdl->do("CREATE INDEX IF NOT EXISTS redir ON beacons(altid);") or croak("Setup error: ".$hdl->errstr);
         };
     }
   elsif ( $options{'verbose'} ) {
@@ -350,7 +345,7 @@ XxX
       my $rihdl = $self->stmtHdl("INSERT INTO admin VALUES (?, ?);", "fix redirection index statement");
       if ( $options{prepareRedirs} or ( $admref->{$rikey} and not exists $options{prepareRedirs} ) ) {
           print "creating redirection index\n" if $options{prepareRedirs} and $options{'verbose'};
-          $hdl->do("CREATE INDEX IF NOT EXISTS redir ON beacons(altid);") or croak("Setup error: ".$hdl->errstr);
+          $hdl->do("CREATE INDEX IF NOT EXISTS redir ON beacons(altid,seqno);") or croak("Setup error: ".$hdl->errstr);
           $rihdl->execute($rikey, 1)
                 or croak("Could not execute fix redirection index: ".$rihdl->errstr);
         }
