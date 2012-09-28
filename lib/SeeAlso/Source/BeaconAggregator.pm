@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_67';
+    $VERSION     = '0.2_69';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -732,6 +732,9 @@ sub autoIdentifier {
     };
 
   if ( my $package = $adm{"IDENTIFIER_CLASS"} ) {
+      eval { $self->{identifierClass} = $package->new() };
+      return $self->{identifierClass} unless $@;
+
       eval {
           (my $pkgpath = $package) =~ s=::=/=g;  # require needs path...
           require "$pkgpath.pm";
@@ -739,6 +742,7 @@ sub autoIdentifier {
         };
       if ( $@ ) {
          croak "sorry: Identifier Class $package cannot be imported\n$@"};
+
       return $self->{identifierClass} = $package->new();
     };
   return undef;

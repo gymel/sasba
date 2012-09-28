@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_67';
+    $VERSION     = '0.2_69';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -56,6 +56,19 @@ access an existing database or create a new one.
 Sets up and initializes the database structure for the object.
 This has to be done once after creating a new database and after
 upgrading this module.
+
+Valid options include:
+
+=over 8
+
+=item verbose
+
+=item prepareRedirs
+
+=item identifierClss
+
+=back
+
 
 The I<repos> table contains as columns all valid beacon fields plus 
 the following administrative fields which have to be prefixed with 
@@ -183,6 +196,11 @@ Integer version number to migrate database layout.
 
 Name of the Identifier class to be used.
 
+=item REDIRECTION_INDEX
+
+Control creation of an additional index for the I<altid> column
+(facialiates reverse lookups as needed for clustering).
+
 =back
 
 
@@ -287,9 +305,8 @@ XxX
         # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
         # ($at, $type) = SeeAlso::Source::BeaconAggregator->beaconfields("REMARK");
         # $hdl->do("ALTER TABLE repos ADD COLUMN $at $type;");
-          $hdl->do("CREATE INDEX IF NOT EXISTS redir ON beacons(altid);") or croak("Setup error: ".$hdl->errstr);
+        # $hdl->do("CREATE INDEX IF NOT EXISTS redir ON beacons(altid);") or croak("Setup error: ".$hdl->errstr);
         };
-      $hdl->do("ANALYZE;");
     }
   elsif ( $options{'verbose'} ) {
       print "INFO: Database version $dbver is current\n"};
@@ -305,7 +322,7 @@ XxX
    };
 
   my $ickey = "IDENTIFIER_CLASS";
-  if ( (exists $options{identifierClass}) and (my $wanttype = ref($options{identifierClass})) ) {
+  if ( (exists $options{identifierClass}) and (my $wanttype = ref($options{'identifierClass'})) ) {
       if ( (exists $self->{identifierClass}) && (ref($self->{identifierClass}) ne $wanttype) ) {
           croak("Cannot override identifierClass set on new()")};
       if ( my $oldtype = $admref->{$ickey} ) {
@@ -313,8 +330,7 @@ XxX
               unless($oldtype eq $wanttype);
         }
       else {
-          warn "fixing identifierClass as $wanttype in admin table\n" if $options{'verbose'};
-          print "fixing identifierClass as $wanttype" if $options{'verbose'};
+          print "fixing identifierClass as $wanttype\n" if $options{'verbose'};
           my $ichdl = $self->stmtHdl("INSERT INTO admin VALUES (?, ?);", "fix identifier class statement");
           $ichdl->execute($ickey, $wanttype)
                 or croak("Could not execute fix identifier class statement: ".$ichdl->errstr);
@@ -329,6 +345,25 @@ XxX
       delete $self->{identifierClass};
     };
 
+  my $rikey = "REDIRECTION_INDEX";
+  if ( exists $options{prepareRedirs} or exists $admref->{$rikey} ) {
+      my $rihdl = $self->stmtHdl("INSERT INTO admin VALUES (?, ?);", "fix redirection index statement");
+      if ( $options{prepareRedirs} or ( $admref->{$rikey} and not exists $options{prepareRedirs} ) ) {
+          print "creating redirection index\n" if $options{prepareRedirs} and $options{'verbose'};
+          $hdl->do("CREATE INDEX IF NOT EXISTS redir ON beacons(altid);") or croak("Setup error: ".$hdl->errstr);
+          $rihdl->execute($rikey, 1)
+                or croak("Could not execute fix redirection index: ".$rihdl->errstr);
+        }
+      elsif ( not( $admref->{$rikey} and ($options{prepareRedirs} or (not exists $options{prepareRedirs})) ) ) {
+          print "dropping redirection index\n" if $options{'verbose'};
+          $hdl->do("DROP INDEX IF EXISTS redir;") or croak("Setup error: ".$hdl->errstr);
+          $rihdl->execute($rikey, 0)
+                or croak("Could not execute fix redirection index: ".$rihdl->errstr);
+        };
+#     $admref =  $self->admhash();
+    }
+
+  $hdl->do("ANALYZE;");
   return 1;    # o.k.
 };
 

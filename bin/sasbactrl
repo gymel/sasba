@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# Version 0.2_66
+# Version 0.2_69
 # $Id$
 use lib "./lib";
 use strict;
@@ -31,7 +31,7 @@ my $ignore_header_errors = 0;
 my $action = "list";
 my $dbroot = "./beacondbs";
 my ($dsn, $cache_size);
-my ($distinct, $force, $keeposd, $quiet, $dbfile, $itype);
+my ($distinct, $force, $keeposd, $quiet, $dbfile, $itype, $redirs);
 
 #  Application constants
 our $EXAMPLEGOAL = 50;              # don't try to find examples with higher hit count
@@ -66,8 +66,8 @@ Options:
 
 Actions and Arguments:
 
-  init          Set up Database for dsn (dbroot must exist)
-  deflate       Apply VACUUM and REINDEX on SqLite Db 
+  init [--[no]redirs] 
+       [--itype type] Set up Database for dsn (dbroot must exist)
 
   load alias [uri [file]]
   update [seqno_or_alias [uri]]
@@ -96,6 +96,8 @@ Actions and Arguments:
   admin [field[=value]]      list/get/set admin properties:
      DATA_VERSION
      IDENTIFIER_CLASS
+
+  deflate       Apply VACUUM and REINDEX on SqLite Db 
 
 =cut
 
@@ -137,6 +139,10 @@ Sometimes shows less.
 
 Identifier type (corresponding subclass of SeeAlso::Identifier must be installed)
 
+=item B<--redirs=[0|1]>
+
+Prepare additional redirection index
+
 =item --ignore-header-errors
 
 [for update and load]
@@ -156,6 +162,7 @@ GetOptions (
   'force' => \$force,
   'keeposd' => \$keeposd,
   'ignore-header-errors' => \$ignore_header_errors,
+  'redirs!' => \$redirs,
   'itype=s' => \$itype,
   'dbfile=s' => \$dbfile,
   'dbroot=s' => \$dbroot,
@@ -177,6 +184,7 @@ my %passopts = (
   ($distinct ? ( 'distinct' => $distinct) : ()),
   ($force ? ( 'force' => $force) : ()),
   ($verbose ? ( 'verbose' => $verbose) : ()),
+  ((defined $redirs) ? ( 'prepareRedirs' => $redirs) : ()),
   ($ignore_header_errors ? ( 'ignore-header-errors' => $ignore_header_errors) : ()),
 );
 
@@ -787,6 +795,7 @@ elsif ( $action eq "admin" ) {
         while ( scalar @ARGV && (my $field = shift @ARGV) ) {
             my($key, $val) = split(/=/, $field, 2);
             my $oldval = $db->admin($key, $val);
+            $oldval = "{undef}" unless defined $oldval;
             my $changed = ((defined $val) && ($oldval ne $val)) ? "old value $oldval changed" : $oldval;
             print "$key - $changed\n";
           };
