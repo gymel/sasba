@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w
-# Version 0.2_71
 # $Id$
 use lib "./lib";
 use strict;
@@ -11,6 +10,8 @@ use SeeAlso::Identifier;
 use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
+
+our $VERSION = '0.2_72';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;
@@ -98,6 +99,8 @@ Actions and Arguments:
      IDENTIFIER_CLASS
 
   deflate       Apply VACUUM and REINDEX on SqLite Db 
+
+  version       gives versions numbers of involved modules
 
 =cut
 
@@ -294,7 +297,7 @@ elsif ( $action eq "status" ) {
                                           $metaref->{_alias} || "",
                                           $metaref->{_sort} || "",
                                           $metaref->{_mtime} || "???",
-         $metaref->{-live_count_id} || 0, $metaref->{-live_unique_id} || 0);
+                $metaref->{_counti} || 0, $metaref->{_countu} || 0);
 
         printf(" < \t%s\n", $hashref->{FEED}) if $hashref->{FEED};
         printf(" << \t%s\n", $metaref->{_uri} || "???") unless $hashref->{FEED} && $metaref->{_uri} && ($hashref->{FEED} eq $metaref->{_uri});
@@ -435,7 +438,7 @@ elsif ( $action eq "header" ) {
           };
         if ( $did ) {
             print "Changed $did fields for $seqno_or_alias\n";
-            refreshOSD(0);
+            refreshOSD(0) unless $keeposd;
           };
       }
     else {       # Simply dump a list of aliases
@@ -471,7 +474,7 @@ elsif ( $action eq "load" ) {
         die ("Please specify an uri and optionally a beacon data file")};
     die "Load failed\n" unless $cn;
     print "Collection Number $cn ($cc records)\n";
-    refreshOSD($force);
+    refreshOSD($force) unless $keeposd;
   }
 
 =item C<update>
@@ -577,7 +580,7 @@ elsif ( $action eq "update" ) {
             my ($cn, $cc) = $db->update($aliasref->{$_}, {}, %passopts, ($forcereload ? ( 'force' => 1) : ()));
             if ( $cn ) {
                 printf "%2u: %s successfully updated (new SeqNo %u, %u records)\n", ++$did, $aliasref->{$_}, $cn, $cc;
-                refreshOSD(0);
+                refreshOSD(0) unless $keeposd;
               };
             print " ***\n";
           };
@@ -620,10 +623,10 @@ is given.
 elsif ( ($action eq "unload") or ($action eq "purge") ) {
     my $seqno_or_alias = shift @ARGV or die "Please specify alias, pattern or SeqNo";
     if ( $db->$action($seqno_or_alias, %passopts) ) {
-        refreshOSD(1)}
+        refreshOSD(1) unless $keeposd}
     else {
         warn "did not do anything\n";
-        refreshOSD($force) if $force;
+        refreshOSD($force) if $force and !$keeposd;
       };
   }
 
@@ -746,9 +749,9 @@ elsif ( $action eq "loadmeta" ) {
        }
      close(TPL);
      if ( $didosd ) {
-         refreshOSD(1)}
+         refreshOSD(1) unless $keeposd}
      elsif ( $didmeta ) {
-         refreshOSD($force)};
+         refreshOSD($force) unless $keeposd};
   }
 
 =item C<dumposd>
@@ -817,19 +820,37 @@ SQLite database);
 
 elsif ( $action eq "deflate" ) {
     $db->deflate}
-else {
-    pod2usage({-message => "Unsupported action '$action'", -exitval => 3})}
 
+
+=item C<loadmeta>
+
+Completely exchanges the OSD and beacon meta files for the 
+database by the contents of the file given as first argument.
+
+=cut
+
+elsif ( $action eq "version" ) {
+    print "sasbactrl version $VERSION\n";
+    print "SeeAlso::Source::BeaconAggregator version $SeeAlso::Source::BeaconAggregator::VERSION\n";
+    print "SeeAlso::Source::BeaconAggregator::Maintenance version $SeeAlso::Source::BeaconAggregator::Maintenance::VERSION\n";
+    print "SeeAlso::Identifier version $SeeAlso::Identifier::VERSION\n";
+    print "SeeAlso::Identifier::GND version $SeeAlso::Identifier::GND::VERSION\n";
+  }
 
 =back
 
 =cut
 
+else {
+    pod2usage({-message => "Unsupported action '$action'", -exitval => 3})}
+
+
+
 sub refreshOSD {    # 
-    if ( $keeposd ) {
-        print "NOT refreshing OSD data\n" if $verbose;
-        return 0;
-      }
+#    if ( $keeposd ) {
+#        print "NOT refreshing OSD data\n" if $verbose;
+#        return 0;
+#      }
     my ($doexamples) = @_;
     my $anyref = $db->RepoCols();
     my $repcnt = scalar keys %$anyref;
@@ -838,8 +859,7 @@ sub refreshOSD {    #
     print " ... DateModified" if $verbose;
     $db->setOSD("DateModified", time());
 
-    print " ... Count Identifiers" if $verbose;
-    my $ucount = $db->idStat(undef, ('distinct' => 1));
+    my $gcountu = $db->admin('gcountu') || $db->idStat(undef, distinct => 1) || 0;
 
     print " ... Description" if $verbose;
     my %descr;
@@ -873,7 +893,7 @@ sub refreshOSD {    #
           };
       };
     my $rcount = scalar keys %descr;
-    $db->setOSD("Description", "Currently serving $ucount distinct identifiers from $rcount beacon sources:\n -- "
+    $db->setOSD("Description", "Currently serving $gcountu distinct identifiers from $rcount beacon sources:\n -- "
                                .join(".\n -- ", map { $descr{$_} } sort { $sortref->{$a} cmp $sortref->{$b} } keys %descr)
                );
 

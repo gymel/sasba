@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_71';
+    $VERSION     = '0.2_72';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -65,7 +65,7 @@ Valid options include:
 
 =item prepareRedirs
 
-=item identifierClss
+=item identifierClass
 
 =back
 
@@ -671,23 +671,29 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
 
   my $recok = $recupd + $recnew;
 
-  my $ct1hdl = $self->stmtHdl("SELECT COUNT(*) FROM beacons WHERE seqno==? LIMIT 1;");
-  $ct1hdl->execute($collno) or croak("could not execute live count: ".$ct1hdl->errstr);
-  my $ct1ref = $ct1hdl->fetchrow_arrayref();
-  my $counti = $ct1ref->[0] || 0;
+#  my $ct1hdl = $self->stmtHdl("SELECT COUNT(*) FROM beacons WHERE seqno==? LIMIT 1;");
+#  $ct1hdl->execute($collno) or croak("could not execute live count: ".$ct1hdl->errstr);
+#  my $ct1ref = $ct1hdl->fetchrow_arrayref();
+#  my $counti = $ct1ref->[0] || 0;
 
 # my $ct2hdl = $self->stmtHdl("SELECT COUNT(DISTINCT hash) FROM beacons WHERE seqno==?");
 # using subquery to trick SQLite into using indices
-  my $ct2hdl = $self->stmtHdl("SELECT COUNT(*) FROM (SELECT DISTINCT hash FROM beacons WHERE seqno==?) LIMIT 1;");
-  $ct2hdl->execute($collno) or croak("could not execute live count: ".$ct2hdl->errstr);
-  my $ct2ref = $ct2hdl->fetchrow_arrayref();
-  my $countu = $ct2ref->[0] || 0;
+#  my $ct2hdl = $self->stmtHdl("SELECT COUNT(*) FROM (SELECT DISTINCT hash FROM beacons WHERE seqno==?) LIMIT 1;");
+#  $ct2hdl->execute($collno) or croak("could not execute live count: ".$ct2hdl->errstr);
+#  my $ct2ref = $ct2hdl->fetchrow_arrayref();
+#  my $countu = $ct2ref->[0] || 0;
 
 # combined query turned out as not as efficient
 # my $ct0hdl = $self->stmtHdl("SELECT COUNT(*), COUNT(DISTINCT hash) FROM beacons WHERE seqno==? LIMIT 1;");
 # $ct0hdl->execute($collno) or croak("could not execute live count: ".$ct0hdl->errstr);
 # my $ct0ref = $ct0hdl->fetchrow_arrayref();
 # my ($counti, $countu) = ($ct0ref->[0] || 0, $ct0ref->[1] || 0);
+
+  my $counti = $self->idStat($collno, 'distinct' => 0) || 0;
+  $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
+
+  my $countu = $self->idStat($collno, 'distinct' => 1) || 0;
+  $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
 
   printf("WARNING: expected %u valid records, counted %u\n", $recok, $counti) if $recok != $counti;
 
@@ -1214,6 +1220,10 @@ XxX
   my $rows = $sth->execute(@cval) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   $rows = 0 if $rows eq "0E0";
   $self->{dbh}->do("ANALYZE;");
+
+  $self->admin('gcounti', $self->idStat(0, distinct => 0) || 0);
+  $self->admin('gcountu', $self->idStat(0, distinct => 1) || 0);
+
   return $rows;
 }
 
@@ -1343,15 +1353,7 @@ For each iteration returns two hash references:
      all official beacon fields
 
 =item 2
-     all administrative fields (_alias, ...), including two special ones:
-
-=over 8
-
-=item -live_count_id
-
-=item -live_unique_id
-
-=back
+     all administrative fields (_alias, ...)
 
 =back
 
@@ -1377,26 +1379,7 @@ XxX
     }
 
   my $collno = $info->{seqno} || $seqno_or_alias;
-
-  my $ct1hdl = $self->stmtHdl("SELECT COUNT(*) FROM beacons WHERE seqno==? LIMIT 1;");
-  $ct1hdl->execute($collno) or croak("could not execute live count".$ct1hdl->errstr);
-  my $ct1ref = $ct1hdl->fetchrow_arrayref();
-  my $counti = $ct1ref->[0] || 0;
-
-# my $ct2hdl = $self->stmtHdl("SELECT COUNT(DISTINCT hash) FROM beacons WHERE seqno==?");
-# use subquery to trick SQLite into using indices
-  my $ct2hdl = $self->stmtHdl("SELECT COUNT(*) FROM (SELECT DISTINCT hash FROM beacons WHERE seqno==?) LIMIT 1;");
-  $ct2hdl->execute($collno) or croak("could not execute live count".$ct2hdl->errstr);
-  my $ct2ref = $ct2hdl->fetchrow_arrayref();
-  my $countu = $ct2ref->[0] || 0;
-
-# combined query turned out as not as efficient
-#  my $ct0hdl = $self->stmtHdl("SELECT COUNT(*), COUNT(DISTINCT hash) FROM beacons WHERE seqno==? LIMIT 1;");
-#  $ct0hdl->execute($collno) or croak("could not execute live count: ".$ct0hdl->errstr);
-#  my $ct0ref = $ct0hdl->fetchrow_arrayref();
-#  my ($counti, $countu) = ($ct0ref->[0] || 0, $ct0ref->[1] || 0);
-
-  my %meta = ('-live_count_id' => $counti, '-live_unique_id' => $countu, _seqno => $collno);
+  my %meta = (_seqno => $collno);
   my %result = ();
   while ( my($key, $val) = each %$info ) {
       next unless defined $val;
@@ -1477,7 +1460,7 @@ sub idStat {
         };
     };
 # my $count_what = $options{'distinct'} ? "DISTINCT hash" : "*";
-# will not be optimized by SQLite or mySL: SELECT COUNT($count_what) FROM beacons $cond;
+# will not be optimized by SQLite or mySQL: SELECT COUNT($count_what) FROM beacons $cond;
 # my $sth= $self->stmtHdl("SELECT COUNT($count_what) FROM beacons $cond LIMIT 1;");
   my $from = $options{'distinct'} ? "(SELECT DISTINCT hash FROM beacons $cond)"
                                   : "beacons $cond";

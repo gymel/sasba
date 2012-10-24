@@ -1,5 +1,8 @@
 Revision history for Perl module SeeAlso::Source::BeaconAggregator
 
+0.02_72 2012-09-28
+    - cache global counts in admin table
+
 0.02_70 2012-09-28
     - cluster property for new() method allows to specify a database
       with identifiers to be considered equivalent

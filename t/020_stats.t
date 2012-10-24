@@ -2,7 +2,7 @@
 
 # t/020_stats.t - check dumps and maintenance 
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator::Maintenance' );
@@ -32,6 +32,15 @@ subtest 'idStat' => sub {
 	is($itot, 3, 'idStat for foo returned unexpected count');
 };
 
+# cached idStat
+subtest 'cachedStat' => sub {
+	plan tests => 2;
+        my %adm = %{$use->admhash};
+	my $itot = $use->idStat();
+        is($adm{'gcounti'}, $itot, ' cached identifier count differs from live');
+	my $utot = $use->idStat(0, (distinct => 1));
+        is($adm{'gcountu'}, $utot, ' cached unique identifier count differs from live');
+};
 
 # idCounts
 subtest 'idCounts' => sub {

@@ -158,7 +158,6 @@ subtest 'headers' => sub {
 #		_ruri => $file1_uri,
 		_mtime => 'xxxx-xx-xxTxx:xx:xxZ', _ftime => 'xxxx-xx-xxTxx:xx:xxZ', _utime => 'xxxx-xx-xxTxx:xx:xxZ',
 		_counti => 3, _countu => 3,
-		'-live_count_id' => 3, '-live_unique_id' => 3,
 		_fstat => '0 replaced, 3 new, 0 deleted, 1 duplicate, 0 nil, 0 invalid, 0 ignored',
 		_ustat => 'successfully loaded',
 	      }],
@@ -175,7 +174,6 @@ subtest 'headers' => sub {
 		_uri => $file_uri, _ruri => $file_uri,
 		_mtime => 'xxxx-xx-xxTxx:xx:xxZ', _ftime => 'xxxx-xx-xxTxx:xx:xxZ', _utime => 'xxxx-xx-xxTxx:xx:xxZ',
 		_counti => 4, _countu => 3,
-		'-live_count_id' => 4, '-live_unique_id' => 3,
 		_fstat => '4 replaced, 0 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored',
 		_ustat => 'successfully loaded',
 	      }],
@@ -223,6 +221,8 @@ subtest 'admin' => sub {
 	plan tests => 5;
 	my $expected = { # key, value
 	    DATA_VERSION => 2,
+            gcounti => 7,
+            gcountu => 5,
 #	    IDENTIFIER_TYPE => "",
 	  };
 	my $admref = $use->admin();

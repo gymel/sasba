@@ -1,8 +1,8 @@
 # -*- perl -*-
 
-# t/020_stats.t - check dumps and maintenance 
+# t/021_stats_i.t - check dumps and maintenance 
 
-use Test::More tests => 123;
+use Test::More tests => 119;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator::Maintenance' );
@@ -21,17 +21,30 @@ ok (defined $use, "accessed db with dsn and identifier class");
 isa_ok ($use, 'SeeAlso::Source::BeaconAggregator');
 
 # idStat
-my $itot = $use->idStat();
-ok($itot, 'nonzero idStat');
-is($itot, 7, 'idStat returned unexpected count');
+subtest 'idStat' => sub {
+	plan tests => 6;
+	my $itot = $use->idStat();
+	ok($itot, 'nonzero idStat');
+	is($itot, 7, 'idStat returned unexpected count');
 # idStat distinct
-$itot = $use->idStat(0, (distinct => 1));
-ok($itot, 'nonzero distinct idStat');
-is($itot, 5, ' distinct idStat returned unexpected count');
+	$itot = $use->idStat(0, (distinct => 1));
+	ok($itot, 'nonzero distinct idStat');
+	is($itot, 5, ' distinct idStat returned unexpected count');
 # idStat for one alias
-$itot = $use->idStat('foo');
-ok($itot, 'nonzero idStat for foo');
-is($itot, 3, 'idStat for foo returned unexpected count');
+	$itot = $use->idStat('foo');
+	ok($itot, 'nonzero idStat for foo');
+	is($itot, 3, 'idStat for foo returned unexpected count');
+};
+
+# cached idStat
+subtest 'cachedStat' => sub {
+	plan tests => 2;
+        my %adm = %{$use->admhash};
+	my $itot = $use->idStat();
+        is($adm{'gcounti'}, $itot, ' cached identifier count differs from live');
+	my $utot = $use->idStat(0, (distinct => 1));
+        is($adm{'gcountu'}, $utot, ' cached unique identifier count differs from live');
+};
 
 
 # idCounts
