@@ -11,7 +11,7 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.2_72';
+our $VERSION = '0.2_73';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;
@@ -743,6 +743,8 @@ elsif ( $action eq "loadmeta" ) {
              unless ( $didosd ++ ) {
                  $db->clearOSD($_) foreach $db->osdKeys()};
              $db->addOSD($key, $val) if $val;           # add!
+           }
+         elsif ( /^\s*$/ ) {                            # don't care
            }
          else {
              warn "cannot parse: >$_<"}

@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_72';
+    $VERSION     = '0.2_73';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -670,6 +670,7 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
   print "       ($statline)\n";
 
   my $recok = $recupd + $recnew;
+  my $numchg = ($recnew or $recdel) ? 1 : 0;
 
 #  my $ct1hdl = $self->stmtHdl("SELECT COUNT(*) FROM beacons WHERE seqno==? LIMIT 1;");
 #  $ct1hdl->execute($collno) or croak("could not execute live count: ".$ct1hdl->errstr);
@@ -689,22 +690,29 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
 # my $ct0ref = $ct0hdl->fetchrow_arrayref();
 # my ($counti, $countu) = ($ct0ref->[0] || 0, $ct0ref->[1] || 0);
 
-  my $counti = $self->idStat($collno, 'distinct' => 0) || 0;
-  $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
-
-  my $countu = $self->idStat($collno, 'distinct' => 1) || 0;
-  $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
-
-  printf("WARNING: expected %u valid records, counted %u\n", $recok, $counti) if $recok != $counti;
-
   my $updh = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET counti=?,countu=?,fstat=?,utime=?,ustat=? WHERE seqno==?;
 XxX
+
+  my $counti = $self->idStat($collno, 'distinct' => 0) || 0;
+  printf("WARNING: expected %u valid records, counted %u\n", $recok, $counti) if $recok != $counti;
+  unless ( $numchg ) {
+      $fields->{'_counti'} ||= 0;
+      printf("WARNING: expected unchanged number %u valid records, counted %u\n", $fields->{'_counti'}, $counti) if $fields->{'_counti'} != $counti;
+    };
+
+  my $countu = $numchg ? ( $self->idStat($collno, 'distinct' => 1) || 0 )
+                       : ( $fields->{'_countu'} || $self->idStat($collno, 'distinct' => 1) || 0 );
   $updh->execute($counti, $countu, $statline, time(), "successfully loaded", $collno)
       or croak("Could not execute >".$updh->{Statement}."<: ".$updh->errstr);
-
   close(BKN);
-  $self->{dbh}->do("ANALYZE;");
+
+  if ( $numchg ) {
+      $self->{dbh}->do("ANALYZE;");
+      $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
+      $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
+    };
+
   return ($collno, $recok, undef);
 }
 
@@ -1287,6 +1295,10 @@ XxX
       $usth->execute(0, 0, time, "purged", $seqno)
           or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
     };
+
+  $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
+  $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
+
   return $trows;
 }
 
@@ -1524,6 +1536,7 @@ XxX
   return @$onerow;
 };
 
+
 =head3 idList ( [ $pattern ] ) 
 
 Iterates through the entries according to the optional selection.
@@ -1699,7 +1712,7 @@ XxX
 
 Manipulates the admin table.
 
-Yields a hashref to the admin tabl if called without arguments.
+Yields a hashref to the admin table if called without arguments.
 
 If called with $field, returns the current value, and sets the
 table entry to $value if defined.
