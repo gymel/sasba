@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_73';
+    $VERSION     = '0.2_74';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -443,7 +443,8 @@ sub query {          # SeeAlso-Simple response
 
   my $clusterid;
   if ( $self->{cluster} ) {
-      my $clusterh = $self->stmtHdl("SELECT beacons.altid FROM cluster.beacons WHERE beacons.hash=? OR beacons.altid=? LIMIT 1;");
+      my ($clusterh, $clusterexpl) = $self->stmtHdl("SELECT beacons.altid FROM cluster.beacons WHERE beacons.hash=? OR beacons.altid=? LIMIT 1;");
+      $self->stmtExplain($clusterexpl, $hash, $hash) if $ENV{'DBI_PROFILE'};
       $clusterh->execute($hash, $hash);
       while ( my $onerow = $clusterh->fetchrow_arrayref() ) {
           $clusterid = $onerow->[0];}
@@ -455,9 +456,9 @@ sub query {          # SeeAlso-Simple response
       qw(TARGET ALTTARGET MESSAGE ONEMESSAGE SOMEMESSAGE DESCRIPTION NAME INSTITUTION);
 #              0             1              2              3             4             5
 #            14          15
-  my $sth;
+  my ($sth, $sthexpl);
   if ( $clusterid ) {  # query IN cluster (leader id might not exist at LHS, therefore unionize with beacons.hash=$clusterid (!)
-      $sth = $self->stmtHdl(<<"XxX");
+      ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT beacons.hash, beacons.altid, beacons.seqno, beacons.hits, beacons.info, beacons.link,
        repos.$tfield, repos.$afield, repos.$mfield, repos.$m1field, repos.$msfield, repos.$dfield, repos.$nfield, repos.$ifield,
        repos.sort, repos.alias
@@ -466,10 +467,11 @@ SELECT beacons.hash, beacons.altid, beacons.seqno, beacons.hits, beacons.info, b
        OR (beacons.hash IN (SELECT cluster.beacons.hash FROM cluster.beacons WHERE cluster.beacons.altid=?)) )
   ORDER BY repos.sort, repos.alias;
 XxX
+      $self->stmtExplain($sthexpl, $clusterid, $clusterid) if $ENV{'DBI_PROFILE'};
       $sth->execute($clusterid, $clusterid) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
     }
   else {  # simple query
-      $sth = $self->stmtHdl(<<"XxX");
+      ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT beacons.hash, beacons.altid, beacons.seqno, beacons.hits, beacons.info, beacons.link,
        repos.$tfield, repos.$afield, repos.$mfield, repos.$m1field, repos.$msfield, repos.$dfield, repos.$nfield, repos.$ifield,
        repos.sort, repos.alias
@@ -477,6 +479,7 @@ SELECT beacons.hash, beacons.altid, beacons.seqno, beacons.hits, beacons.info, b
   WHERE beacons.hash=?
   ORDER BY repos.sort, repos.alias;
 XxX
+      $self->stmtExplain($sthexpl, $hash) if $ENV{'DBI_PROFILE'};
       $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
     }
 
@@ -661,9 +664,10 @@ sub OSDValues {
   elsif ( $key ) {
       $constraint = " WHERE (key=?)"};
 
-  my $sth = $self->stmtHdl(<<"XxX");
+  my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT key, val FROM osd $constraint;
 XxX
+  $self->stmtExplain($sthexpl, ($key ? ($key) : ())) if $ENV{'DBI_PROFILE'};
   $sth->execute(($key ? ($key) : ())) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
 
   my %result = ();
@@ -695,8 +699,9 @@ Returns a hashref with the contents of the admin table (readonly, not tied).
 sub admhash {
   my $self = shift;
 
-  my $admh =  $self->stmtHdl("SELECT key, val FROM admin;")
+  my ($admh, $admexpl) =  $self->stmtHdl("SELECT key, val FROM admin;")
           or croak("Could not prepare statement (dump admin table)".$self->{dbh}->errstr);
+  $self->stmtExplain($admexpl) if $ENV{'DBI_PROFILE'};
   $admh->execute() or croak("Could not execute statement (dump admin table): ".$admh->errstr);
   my %adm = ();
   while ( my $onerow = $admh->fetchrow_arrayref() ) {
@@ -720,8 +725,9 @@ sub autoIdentifier {
 
   return $self->{identifierClass} if exists $self->{identifierClass} && ref($self->{identifierClass});
 
-  my $admich =  $self->stmtHdl("SELECT key, val FROM admin WHERE key=?;")
+  my ($admich, $admichexpl) =  $self->stmtHdl("SELECT key, val FROM admin WHERE key=?;")
           or croak("Could not prepare statement (dump admin table)".$self->{dbh}->errstr);
+  $self->stmtExplain($admichexpl, 'IDENTIFIER_CLASS') if $ENV{'DBI_PROFILE'};
   $admich->execute('IDENTIFIER_CLASS') or croak("Could not execute statement (IDENTIFIER_CLASS from admin table): ".$admich->errstr);
   my %adm = ();
   while ( my $onerow = $admich->fetchrow_arrayref() ) {
@@ -766,8 +772,9 @@ defined but false.
 
 sub findExample {
   my ($self, $goal, $offset, $sth) = @_;
+  my $sthexpl;
   unless ( $sth ) {
-      $sth = $self->stmtHdl(<<"XxX");
+      ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT hash, COUNT(*), SUM(hits) FROM beacons GROUP BY hash HAVING COUNT(*)>=? LIMIT 1 OFFSET ?;
 XxX
 #
@@ -776,6 +783,11 @@ XxX
   $offset ||= 0;
   $sth->bind_param(1, $goal, SQL_INTEGER);
   $sth->bind_param(2, $offset, SQL_INTEGER);
+  if ( $sthexpl && $ENV{'DBI_PROFILE'} ) {
+      $sthexpl->[0]->bind_param(1, $goal, SQL_INTEGER);
+      $sthexpl->[0]->bind_param(2, $offset, SQL_INTEGER);
+      $self->stmtExplain($sthexpl);
+    };
   $sth->execute() or croak("Could not execute canned sql (findExample): ".$sth->errstr);
   if ( my $onerow = $sth->fetchrow_arrayref ) {
       if ( defined $self->{identifierClass} ) {
@@ -827,24 +839,31 @@ sub stmtHdl {
   my $if_active = $ENV{'DBI_PROFILE'} ? 0 : 1;
   my $sth = $self->{dbh}->prepare_cached($sql, {}, $if_active)
       or croak("Could not prepare $errtext: ".$self->{dbh}->errstr);
+  return $sth unless wantarray;
   if ( $ENV{'DBI_PROFILE'} ) {
       my @callerinfo = caller;
-      if ( $sth->{Executed} ) {
-          print STDERR "reusing handle for $sql (@callerinfo)===\n";
-        }
-      else {
-          print STDERR "explain $sql (@callerinfo)===\n";
-          my $esth = $self->{dbh}->prepare("EXPLAIN QUERY PLAN $sql") or croak("cannot prepare for explain $sql");
-          $esth->execute() or croak("cannot execute explain statement $sql");
-          local $" = " | ";
-          while ( my $rowref = $esth->fetchrow_arrayref ) {
-              print STDERR "@$rowref\n";
-            }
-          print STDERR "===\n";
-        }
+      print STDERR "reusing handle for $sql (@callerinfo)===\n" if $sth->{Executed};
+      my $esth = $self->{dbh}->prepare_cached("EXPLAIN QUERY PLAN $sql", {}, 0)
+          or croak("Could not prepare explain query plan stmt: ".$self->{dbh}->errstr);
+      return $sth, [$esth, $sql];
     }
-  return $sth;
+  else {
+      return $sth, undef};
 };
+
+sub stmtExplain {
+  my ($self, $eref, @args) = @_;
+  my $esql = $eref->[1];
+  my @callerinfo = caller;
+  print STDERR "explain $esql (@callerinfo)===\n";
+  my $esth = $eref->[0];
+  $esth->execute(@args) or croak("cannot execute explain statement $esql with args @args");
+  local $" = " | ";
+  while ( my $rowref = $esth->fetchrow_arrayref ) {
+       print STDERR "@$rowref\n";
+    }
+  print STDERR "===\n";
+}
 
 
 =head1 BUGS

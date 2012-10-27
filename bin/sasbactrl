@@ -11,7 +11,7 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.2_73';
+our $VERSION = '0.2_74';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;

@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_73";
+our $VERSION = "0.2_74";
 
 =head1 NAME
 
@@ -151,9 +151,10 @@ sub beacon {
 
   my $c = (defined $self->{identifierClass}) ? $self->{identifierClass} : $self->autoIdentifier();
 
-  my $sth = $self->stmtHdl(<<"XxX");
+  my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT hash, COUNT(DISTINCT seqno) FROM beacons GROUP BY hash ORDER BY hash;
 XxX
+  $self->stmtExplain($sthexpl) if $ENV{'DBI_PROFILE'};
   $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   my $rows = 0;
   while ( my $row = $sth->fetchrow_arrayref ) {
@@ -183,9 +184,10 @@ sub dumpmeta {    # cgibase unAPIformatname headers_only {preset}
   my $headersonly = shift @_ if @_ && !ref($_[0]);
   my $preset = (@_ && ref($_[0])) ? (shift @_) : {};
 
-  my $metasth = $self->stmtHdl(<<"XxX");
+  my ($metasth, $metasthexpl) = $self->stmtHdl(<<"XxX");
 SELECT key, val FROM osd;
 XxX
+  $self->stmtExplain($metasthexpl) if $ENV{'DBI_PROFILE'};
   $metasth->execute() or croak("Could not execute >".$metasth->{Statement}."<: ".$metasth->errstr);
 
   my (%osd, %beaconmeta);
@@ -257,9 +259,10 @@ XxX
 
 # extract admin info of last transaction (i.e. last possible modification of underlying data)
 # alternatively: SELECT seqno, utime FROM repos WHERE seqno=(SELECT MAX(seqno) FROM repos);
-  my $laststh = $self->stmtHdl(<<"XxX");
+  my ($laststh, $laststhexpl) = $self->stmtHdl(<<"XxX");
 SELECT MAX(seqno), MAX(mtime) FROM repos;
 XxX
+  $self->stmtExplain($laststhexpl) if $ENV{'DBI_PROFILE'};
   $laststh->execute() or croak("Could not execute >".$laststh->{Statement}."<: ".$laststh->errstr);
   if ( my $aryref = $laststh->fetchrow_arrayref ) {
       my ($sq, $ut) = @$aryref;
@@ -373,7 +376,8 @@ sub redirect {          # Liste der Beacon-Header fuer Treffer oder einfaches re
 
   my $clusterid;
   if ( $self->{cluster} ) {
-      my $clusterh = $self->stmtHdl("SELECT beacons.altid FROM cluster.beacons WHERE beacons.hash=? OR beacons.altid=? LIMIT 1;");
+      my ($clusterh, $clusterexpl) = $self->stmtHdl("SELECT beacons.altid FROM cluster.beacons WHERE beacons.hash=? OR beacons.altid=? LIMIT 1;");
+      $self->stmtExplain($clusterexpl, $hash, $hash) if $ENV{'DBI_PROFILE'};
       $clusterh->execute($hash, $hash);
       while ( my $onerow = $clusterh->fetchrow_arrayref() ) {
           $clusterid = $onerow->[0];}
@@ -385,9 +389,9 @@ sub redirect {          # Liste der Beacon-Header fuer Treffer oder einfaches re
 # above  5       6         7         8       9      10
 # below        0              1             2             3       4
 #            11
-  my $sth;
+  my ($sth, $sthexpl);
   if ( $clusterid ) {  # query IN cluster
-      $sth = $self->stmtHdl(<<"XxX");
+      ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT beacons.hash, beacons.altid, beacons.hits, beacons.info, beacons.link,
        repos.$tfield, repos.$afield, repos.$gfield, repos.$mfield, repos.$nfield, repos.$ifield,
        repos.alias
@@ -396,10 +400,11 @@ SELECT beacons.hash, beacons.altid, beacons.hits, beacons.info, beacons.link,
        OR (beacons.hash IN (SELECT cluster.beacons.hash FROM cluster.beacons WHERE cluster.beacons.altid=?)) )
   $clause;
 XxX
+      $self->stmtExplain($sthexpl, $clusterid, $clusterid) if $ENV{'DBI_PROFILE'};
       $sth->execute($clusterid, $clusterid) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
     }
   else {
-      $sth = $self->stmtHdl(<<"XxX");
+      ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT beacons.hash, beacons.altid, beacons.hits, beacons.info, beacons.link,
        repos.$tfield, repos.$afield, repos.$gfield, repos.$mfield, repos.$nfield, repos.$ifield,
        repos.alias
@@ -407,6 +412,7 @@ SELECT beacons.hash, beacons.altid, beacons.hits, beacons.info, beacons.link,
   WHERE beacons.hash=? 
   $clause;
 XxX
+      $self->stmtExplain($sthexpl, $hash) if $ENV{'DBI_PROFILE'};
       $sth->execute($hash) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
     }
 
@@ -572,7 +578,8 @@ sub sources {          # Liste der Beacon-Header fuer Treffer
   my ($clusterid, %idlist);
   my $c = $self->{identifierClass} || undef;
   if ( $self->{cluster} ) {
-      my $clusterh = $self->stmtHdl("SELECT beacons.hash, beacons.altid FROM cluster.beacons WHERE beacons.hash=? OR beacons.altid=? LIMIT 1;");
+      my ($clusterh, $clusterexpl) = $self->stmtHdl("SELECT beacons.hash, beacons.altid FROM cluster.beacons WHERE beacons.hash=? OR beacons.altid=? LIMIT 1;");
+      $self->stmtExplain($clusterexpl, $hash, $hash) if $ENV{'DBI_PROFILE'};
       $clusterh->execute($hash, $hash) or croak("Could not execute >".$clusterh->{Statement}."<: ".$clusterh->errstr);
       while ( my $onerow = $clusterh->fetchrow_arrayref() ) {
           $clusterid = $onerow->[1];
@@ -601,18 +608,20 @@ sub sources {          # Liste der Beacon-Header fuer Treffer
         }
     }
 
-  my $countsth;
+  my ($countsth, $countexpl);
   if ( $clusterid ) {
-      $countsth = $self->stmtHdl(<<"XxX");
+      ($countsth, $countexpl) = $self->stmtHdl(<<"XxX");
 SELECT COUNT(DISTINCT seqno) FROM beacons
  WHERE ( (hash=?) OR (hash IN (SELECT beacons.hash FROM cluster.beacons WHERE cluster.beacons.altid=?)) );
 XxX
+      $self->stmtExplain($countexpl, $clusterid, $clusterid) if $ENV{'DBI_PROFILE'};
       $countsth->execute($clusterid, $clusterid) or croak("Could not execute >".$countsth->{Statement}."<: ".$countsth->errstr);
     }
   else {
-      $countsth = $self->stmtHdl(<<"XxX");
+      ($countsth, $countexpl) = $self->stmtHdl(<<"XxX");
 SELECT COUNT(DISTINCT seqno) FROM beacons WHERE hash=?;
 XxX
+      $self->stmtExplain($countexpl, $hash) if $ENV{'DBI_PROFILE'};
       $countsth->execute($hash) or croak("Could not execute >".$countsth->{Statement}."<: ".$countsth->errstr);
     };
   my $hitsref = $countsth->fetchrow_arrayref;
@@ -650,24 +659,26 @@ XxX
   push(@result, $cgi->p($cgi->span("Variant Identifiers:"), map {$cgi->span({class=>($idlist{$_} || "variantid")}, $_)} sort keys %idlist)) if %idlist;
   push(@result, '</div>');
 
-  my $srcsth;
+  my ($srcsth, $srcexpl);
   if ( $clusterid ) {
-      $srcsth = $self->stmtHdl(<<"XxX");
+      ($srcsth, $srcexpl) = $self->stmtHdl(<<"XxX");
 SELECT beacons.*, repos.*
   FROM beacons NATURAL LEFT JOIN repos
   WHERE ( (beacons.hash=?)
        OR (beacons.hash IN (SELECT beacons.hash FROM cluster.beacons WHERE cluster.beacons.altid=?)) )
   ORDER BY repos.sort, repos.alias;
 XxX
+      $self->stmtExplain($srcexpl, $clusterid, $clusterid) if $ENV{'DBI_PROFILE'};
       $srcsth->execute($clusterid, $clusterid) or croak("Could not execute >".$srcsth->{Statement}."<: ".$srcsth->errstr);
     }
   else {
-      $srcsth = $self->stmtHdl(<<"XxX");
+      ($srcsth, $srcexpl) = $self->stmtHdl(<<"XxX");
 SELECT beacons.*, repos.*
   FROM beacons NATURAL LEFT JOIN repos
   WHERE beacons.hash=? 
   ORDER BY repos.sort, repos.alias;
 XxX
+      $self->stmtExplain($srcexpl, $hash) if $ENV{'DBI_PROFILE'};
       $srcsth->execute($hash) or croak("Could not execute >".$srcsth->{Statement}."<: ".$srcsth->errstr);
     }
 
@@ -908,9 +919,10 @@ Beacon header fields
 sub get_meta {
   my ($self) = @_;
 
-  my $metasth = $self->stmtHdl(<<"XxX");
+  my ($metasth, $metaexpl) = $self->stmtHdl(<<"XxX");
 SELECT key, val FROM osd;
 XxX
+  $self->stmtExplain($metaexpl) if $ENV{'DBI_PROFILE'};
   $metasth->execute() or croak("Could not execute >".$metasth->{Statement}."<: ".$metasth->errstr);
   my (%osd, %beaconmeta);
   while ( my $aryref = $metasth->fetchrow_arrayref ) {

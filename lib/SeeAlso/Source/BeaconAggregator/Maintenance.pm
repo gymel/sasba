@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_73';
+    $VERSION     = '0.2_74';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -647,7 +647,8 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
   if ( $autopurge ) {
       $self->{dbh}->{AutoCommit} = 0;
       if ( $oseq ) {
-          my $bcdelh = $self->stmtHdl("DELETE FROM beacons WHERE seqno==?");
+          my ($bcdelh, $bcdelexpl) = $self->stmtHdl("DELETE FROM beacons WHERE seqno==?");
+          $self->stmtExplain($bcdelexpl, $oseq) if $ENV{'DBI_PROFILE'};
           my $rows = $bcdelh->execute($oseq) or croak("Could not execute >".$bcdelh->{Statement}."<: ".$bcdelh->errstr);
           $self->{dbh}->{AutoCommit} = 1;
           printf("INFO: Purged %s surplus identifiers from old sequence %u\n", $rows, $oseq) if $options{'verbose'};
@@ -656,7 +657,8 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
         };
 
       $self->{dbh}->{AutoCommit} = 0;
-      my $rpdelh = $self->stmtHdl("DELETE FROM repos WHERE (alias=?) AND (seqno<?);");
+      my ($rpdelh, $rpdelexpl) = $self->stmtHdl("DELETE FROM repos WHERE (alias=?) AND (seqno<?);");
+      $self->stmtExplain($rpdelexpl, $autopurge, $collno) if $ENV{'DBI_PROFILE'};
       my $rows = $rpdelh->execute($autopurge, $collno) or croak("Could not execute >".$rpdelh->{Statement}."<: ".$rpdelh->errstr);
       $self->{dbh}->{AutoCommit} = 1;
       $rows = "0" if $rows eq "0E0";
@@ -690,7 +692,7 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
 # my $ct0ref = $ct0hdl->fetchrow_arrayref();
 # my ($counti, $countu) = ($ct0ref->[0] || 0, $ct0ref->[1] || 0);
 
-  my $updh = $self->stmtHdl(<<"XxX");
+  my ($updh, $updexpl) = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET counti=?,countu=?,fstat=?,utime=?,ustat=? WHERE seqno==?;
 XxX
 
@@ -703,6 +705,7 @@ XxX
 
   my $countu = $numchg ? ( $self->idStat($collno, 'distinct' => 1) || 0 )
                        : ( $fields->{'_countu'} || $self->idStat($collno, 'distinct' => 1) || 0 );
+  $self->stmtExplain($updexpl, $counti, $countu, $statline, time(), "successfully loaded", $collno) if $ENV{'DBI_PROFILE'};
   $updh->execute($counti, $countu, $statline, time(), "successfully loaded", $collno)
       or croak("Could not execute >".$updh->{Statement}."<: ".$updh->errstr);
   close(BKN);
@@ -745,7 +748,8 @@ sub processbeaconheader {
 
   if ( my $alias = $fieldref->{_alias} ) {
       my $stampfield = SeeAlso::Source::BeaconAggregator->beaconfields("TIMESTAMP");
-      my $listh = $self->stmtHdl("SELECT seqno, $stampfield, mtime, counti FROM repos WHERE alias=?;");
+      my ($listh, $listexpl) = $self->stmtHdl("SELECT seqno, $stampfield, mtime, counti FROM repos WHERE alias=?;");
+      $self->stmtExplain($listexpl, $alias) if $ENV{'DBI_PROFILE'};
       $listh->execute($alias) or croak("Could not execute >".$listh->{Statement}."<: ".$listh->errstr);
       while ( my($row) = $listh->fetchrow_arrayref ) {
           last unless defined $row;
@@ -912,9 +916,10 @@ sub processbeaconheader {
       push(@fd, $myval);
     };
   local($") = ",\n";
-  my $sth = $self->stmtHdl(<<"XxX");
+  my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 INSERT INTO repos ( seqno, @fn ) VALUES ( NULL, @fd );
 XxX
+  $self->stmtExplain($sthexpl) if $ENV{'DBI_PROFILE'};
   $sth->execute() or croak("Could not execute >".$sth->{Statement}."<:".$sth->errstr);
   my $collno = $self->{dbh}->last_insert_id("", "", "", "");
 
@@ -1021,9 +1026,10 @@ sub update {
   my ($cond, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($sq_or_alias);
   my $alias = ($sq_or_alias =~ /^\d+$/) ? "" : $sq_or_alias;
   my $feedname = SeeAlso::Source::BeaconAggregator->beaconfields("FEED");
-  my $ssth = $self->stmtHdl(<<"XxX");
+  my ($ssth, $ssthexpl) = $self->stmtHdl(<<"XxX");
 SELECT seqno, uri, alias, $feedname, ftime, mtime FROM repos $cond;
 XxX
+  $self->stmtExplain($ssthexpl, @cval) if $ENV{'DBI_PROFILE'};
   $ssth->execute(@cval) or croak("Could not execute >".$ssth->{Statement}."<: ".$ssth->errstr);
   croak("Select old instance error: ".$ssth->errstr) if $ssth->err;
   my $aryref = $ssth->fetchrow_arrayref;
@@ -1110,9 +1116,10 @@ XxX
 
       my ($collno, $count, $statref) = $self->loadFile($tmpfile, {_alias => $alias, _uri => $uri, _ruri => $nuri, _mtime => $lm}, %options);
       if ( ! $collno && $osq ) {
-          my $usth = $self->stmtHdl(<<"XxX");
+          my ($usth, $usthexpl) = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET utime=?,ustat=? WHERE seqno==?;
 XxX
+          $self->stmtExplain($usthexpl, time(), ($statref ? "load error: $statref" : "internal error"), $osq) if $ENV{'DBI_PROFILE'};
           $usth->execute(time(), ($statref ? "load error: $statref" : "internal error"), $osq)
                or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
         };
@@ -1124,9 +1131,10 @@ XxX
       print "INFO: $alias not modified since ".HTTP::Date::time2str($modtime)."\n";
       my $vt = $response->fresh_until(h_min => 1800, h_max => 6 * 86400);
       printf("  %-30s %s\n", "Will not try again before", scalar localtime($vt)) if $options{'verbose'};
-      my $usth = $self->stmtHdl(<<"XxX");
+      my ($usth, $usthexpl) = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET utime=?,ustat=?,ruri=? WHERE seqno==?;
 XxX
+      $self->stmtExplain($usthexpl, time(), $response->status_line, $nuri, $osq) if $ENV{'DBI_PROFILE'};
       $usth->execute(time(), $response->status_line, $nuri, $osq)
           or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
       return undef;
@@ -1135,9 +1143,10 @@ XxX
       print "WARNING: No access to $uri for $alias [".$response->status_line."]\n";
       print $response->headers_as_string, "\n";
       return undef unless $osq;
-      my $usth = $self->stmtHdl(<<"XxX");
+      my ($usth, $usthexpl) = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET utime=?,ustat=?,ruri=? WHERE seqno==?;
 XxX
+      $self->stmtExplain($usthexpl, time(), $response->status_line, $nuri, $osq) if $ENV{'DBI_PROFILE'};
       $usth->execute(time(), $response->status_line, $nuri, $osq)
           or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
       return undef;
@@ -1212,19 +1221,21 @@ sub unload {
     };
 
   if ( $options{'force'} ) {
-      my $sth = $self->stmtHdl(<<"XxX");
+      my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 DELETE FROM beacons WHERE seqno==?;
 XxX
       foreach my $seqno ( @seqnos ) {
+          $self->stmtExplain($sthexpl, $seqno_or_alias) if $ENV{'DBI_PROFILE'};
           my $rows = $sth->execute($seqno_or_alias) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
           print "INFO: $rows forced for $seqno\n" if $options{'verbose'};
         };
     };
 
   my ($cond, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($seqno_or_alias);
-  my $sth = $self->stmtHdl(<<"XxX");
+  my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 DELETE FROM repos $cond;
 XxX
+  $self->stmtExplain($sthexpl, @cval) if $ENV{'DBI_PROFILE'};
   my $rows = $sth->execute(@cval) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   $rows = 0 if $rows eq "0E0";
   $self->{dbh}->do("ANALYZE;");
@@ -1280,18 +1291,20 @@ sub purge {
       carp("Use --force to purge the complete database");
       return 0;
     };
-  my $sth = $self->stmtHdl(<<"XxX");
+  my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 DELETE FROM beacons WHERE seqno==?;
 XxX
-  my $usth = $self->stmtHdl(<<"XxX");
+  my ($usth, $usthexpl) = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET counti=?,countu=?,utime=?,ustat=? WHERE seqno==?;
 XxX
   my $trows = 0;
   foreach my $seqno ( @seqnos ) {
+      $self->stmtExplain($sthexpl, $seqno) if $ENV{'DBI_PROFILE'};
       my $rows = $sth->execute($seqno) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $rows = "0" if $rows eq "0E0";
       print "INFO: $rows purged for $seqno\n" if $options{'verbose'};
       $trows += $rows;
+      $self->stmtExplain($usthexpl, 0, 0, time, "purged", $seqno) if $ENV{'DBI_PROFILE'};
       $usth->execute(0, 0, time, "purged", $seqno)
           or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
     };
@@ -1326,25 +1339,28 @@ sub headerfield {
 
   my ($cond, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($sq_or_alias);
 
-  my $osth = $self->stmtHdl(<<"XxX");
+  my ($osth, $osthexpl) = $self->stmtHdl(<<"XxX");
 SELECT $dbkey FROM repos $cond;
 XxX
+  $self->stmtExplain($osthexpl, @cval) if $ENV{'DBI_PROFILE'};
   $osth->execute(@cval) or croak("Could not execute >".$osth->{Statement}."<:".$osth->errstr);
   my $tmpval = $osth->fetchall_arrayref();
   my @oval = map { hEncode($_, $key) } map { (defined $_->[0]) ? ($_->[0]) : () } @$tmpval;
   my $rows = scalar @oval;
 
   if ( (defined $value) and ($value ne "") ) {                # set
-      my $usth = $self->stmtHdl(<<"XxX");
+      my ($usth, $usthexpl) = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET $dbkey=? $cond;
 XxX
       $value = hDecode($value, $key) || "";
+      $self->stmtExplain($usthexpl, $value, @cval) if $ENV{'DBI_PROFILE'};
       $rows = $usth->execute($value, @cval) or croak("Could not execute >".$usth->{Statement}."<:".$usth->errstr);
     }
   elsif ( defined $value ) {     # clear
-      my $dsth = $self->stmtHdl(<<"XxX");
+      my ($dsth, $dsthexpl) = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET $dbkey=? $cond;
 XxX
+      $self->stmtExplain($dsthexpl, undef, @cval) if $ENV{'DBI_PROFILE'};
       $rows = $dsth->execute(undef, @cval) or croak("Could not execute >".$dsth->{Statement}."<:".$dsth->errstr);
     }
   else {                         # read
@@ -1376,9 +1392,10 @@ sub headers {
 
   unless ( $self->{_iterator_info} ) {
       my ($constraint,  @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($seqno_or_alias);
-      my $sth = $self->stmtHdl(<<"XxX");
+      my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT * FROM repos $constraint;
 XxX
+      $self->stmtExplain($sthexpl, @cval) if $ENV{'DBI_PROFILE'};
       $sth->execute(@cval) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $self->{_iterator_info} = $sth;
     };
@@ -1420,9 +1437,10 @@ sub listCollections {
 
   unless ( $self->{_iterator_listCollections} ) {
       my ($constraint, @cval) = SeeAlso::Source::BeaconAggregator::mkConstraint($seqno_or_alias);
-      my $sth = $self->stmtHdl(<<"XxX");
+      my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT seqno, alias, uri, mtime, counti, countu FROM repos $constraint;
 XxX
+      $self->stmtExplain($sthexpl, @cval) if $ENV{'DBI_PROFILE'};
       $sth->execute(@cval) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $self->{_iterator_listCollections} = $sth;
     };
@@ -1476,9 +1494,10 @@ sub idStat {
 # my $sth= $self->stmtHdl("SELECT COUNT($count_what) FROM beacons $cond LIMIT 1;");
   my $from = $options{'distinct'} ? "(SELECT DISTINCT hash FROM beacons $cond)"
                                   : "beacons $cond";
-  my $sth = $self->stmtHdl(<<"XxX");
+  my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT COUNT(*) FROM $from LIMIT 1;
 XxX
+  $self->stmtExplain($sthexpl) if $ENV{'DBI_PROFILE'};
   $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   my $hits = $sth->fetchrow_arrayref;
 
@@ -1510,9 +1529,10 @@ sub idCounts {
   my $cond = $pattern ? qq!WHERE hash LIKE "$pattern"! : "";
   my $count_what = $options{'distinct'} ? "DISTINCT seqno" : "seqno";
   unless ( $self->{_iterator_idCounts} ) {
-      my $sth = $self->stmtHdl(<<"XxX");
+      my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT hash, COUNT($count_what), SUM(hits) FROM beacons $cond GROUP BY hash ORDER BY hash;
 XxX
+      $self->stmtExplain($sthexpl) if $ENV{'DBI_PROFILE'};
       $sth->execute() or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $self->{_iterator_idCounts} = $sth;
       unless ( defined $self->{identifierClass} ) {
@@ -1558,9 +1578,10 @@ sub idList {
   my $cond = $pattern ? ($pattern =~ /%/ ? "WHERE hash LIKE ?" : qq"WHERE hash=?")
                       : "";
   unless ( $self->{_iterator_idList_handle} ) {
-      my $sth = $self->stmtHdl(<<"XxX");
+      my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 SELECT hash, seqno, hits, info, link, altid FROM beacons $cond ORDER BY hash, seqno, altid;
 XxX
+      $self->stmtExplain($sthexpl, ($pattern ? ($pattern) : () )) if $ENV{'DBI_PROFILE'};
       $sth->execute(($pattern ? ($pattern) : () )) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
       $self->{_iterator_idList_handle} = $sth;
       $self->{_iterator_idList_crosscheck} = $self->RepoCols("ALTTARGET");
@@ -1632,9 +1653,10 @@ sub clearOSD {
   my ($self, $field) = @_;
   $field || (carp("no OSD field name provided"), return undef);
   defined $self->osdKeys($field) || (carp("no valid OSD field '$field'"), return undef);
-  my $sth = $self->stmtHdl(<<"XxX");
+  my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 DELETE FROM osd WHERE key=?;
 XxX
+  $self->stmtExplain($sthexpl, $field) if $ENV{'DBI_PROFILE'};
   $sth->execute($field) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   return 1;
 }
@@ -1649,11 +1671,11 @@ sub addOSD {
   my ($self, $field, $value) = @_;
   $field || (carp("no OSD field name provided"), return undef);
   defined $self->osdKeys($field) || (carp("no valid OSD field '$field'"), return undef);
-  my $sth = $self->{_handles}->{insertosd} || $self->stmtHdl(<<"XxX");
+  my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 INSERT INTO osd ( key, val ) VALUES ( ?, ? );
 XxX
+  $self->stmtExplain($sthexpl, $field, $value) if $ENV{'DBI_PROFILE'};
   $sth->execute($field, $value) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
-  $self->{_handles}->{insertosd} ||= $sth;
   return 1;
 }
 
@@ -1684,9 +1706,10 @@ sub clearBeaconMeta {
   my ($self, $rfield) = @_;
   $rfield || (carp("no Beacon field name provided"), return undef);
   my $field = $self->beaconfields($rfield) or (carp("no valid Beacon field '$rfield'"), return undef);
-  my $sth = $self->stmtHdl(<<"XxX");
+  my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 DELETE FROM osd WHERE key=?;
 XxX
+  $self->stmtExplain($sthexpl, $field) if $ENV{'DBI_PROFILE'};
   $sth->execute($field) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   return 1;
 }
@@ -1700,11 +1723,11 @@ sub addBeaconMeta {
   my ($self, $rfield, $value) = @_;
   $rfield || (carp("no Beacon field name provided"), return undef);
   my $field = $self->beaconfields($rfield) or (carp("no valid Beacon field '$rfield'"), return undef);
-  my $sth = $self->{_handles}->{insertosd} || $self->stmtHdl(<<"XxX");
+  my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 INSERT INTO osd ( key, val ) VALUES ( ?, ? );
 XxX
+  $self->stmtExplain($sthexpl, $field, $value) if $ENV{'DBI_PROFILE'};
   $sth->execute($field, $value) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
-  $self->{_handles}->{insertosd} ||= $sth;
   return 1;
 }
 
@@ -1727,7 +1750,8 @@ sub admin {
   my $retval = $admref->{$field};
   return $retval unless defined $value;
 
-  my $admh = $self->stmtHdl("INSERT OR REPLACE INTO admin VALUES (?, ?);");
+  my ($admh, $admexpl) = $self->stmtHdl("INSERT OR REPLACE INTO admin VALUES (?, ?);");
+  $self->stmtExplain($admexpl, $field, $value) if $ENV{'DBI_PROFILE'};
   $admh->execute($field, $value)
        or croak("Could not execute update to admin table: ".$admh->errstr);
   return defined($retval) ? $retval : "";
