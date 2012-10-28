@@ -855,7 +855,7 @@ sub stmtExplain {
   my ($self, $eref, @args) = @_;
   my $esql = $eref->[1];
   my @callerinfo = caller;
-  print STDERR "explain $esql (@callerinfo)===\n";
+  print STDERR "explain $esql\n\tfor data @args\n(@callerinfo)===\n";
   my $esth = $eref->[0];
   $esth->execute(@args) or croak("cannot execute explain statement $esql with args @args");
   local $" = " | ";

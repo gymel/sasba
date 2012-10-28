@@ -858,6 +858,11 @@ sub refreshOSD {    #
     my $repcnt = scalar keys %$anyref;
     print "Refreshing OSD data from $repcnt sources";
 
+    if ( $doexamples ) {
+        print " ... ANALYZE" if $verbose;
+        $db->{dbh}->do("ANALYZE;");
+      };
+
     print " ... DateModified" if $verbose;
     $db->setOSD("DateModified", time());
 

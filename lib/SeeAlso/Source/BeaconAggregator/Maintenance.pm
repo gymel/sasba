@@ -710,8 +710,9 @@ XxX
       or croak("Could not execute >".$updh->{Statement}."<: ".$updh->errstr);
   close(BKN);
 
-  if ( $numchg ) {
-      $self->{dbh}->do("ANALYZE;");
+  if ( $numchg or $options{'force'} ) {
+      $self->{dbh}->do("ANALYZE;") if $options{'force'};
+
       $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
       $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
     };
@@ -1238,10 +1239,13 @@ XxX
   $self->stmtExplain($sthexpl, @cval) if $ENV{'DBI_PROFILE'};
   my $rows = $sth->execute(@cval) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
   $rows = 0 if $rows eq "0E0";
-  $self->{dbh}->do("ANALYZE;");
 
-  $self->admin('gcounti', $self->idStat(0, distinct => 0) || 0);
-  $self->admin('gcountu', $self->idStat(0, distinct => 1) || 0);
+  if ( $rows or $options{'force'} ) {
+      $self->{dbh}->do("ANALYZE;") if $options{'force'};
+
+      $self->admin('gcounti', $self->idStat(0, distinct => 0) || 0);
+      $self->admin('gcountu', $self->idStat(0, distinct => 1) || 0);
+    };
 
   return $rows;
 }
@@ -1309,8 +1313,12 @@ XxX
           or croak("Could not execute >".$usth->{Statement}."<: ".$usth->errstr);
     };
 
-  $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
-  $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
+  if ( $trows or $options{'force'} ) {
+      $self->{dbh}->do("ANALYZE;") if $options{'force'};
+
+      $self->admin('gcounti', $self->idStat(0, distinct => 0) || 0);
+      $self->admin('gcountu', $self->idStat(0, distinct => 1) || 0);
+    };
 
   return $trows;
 }
