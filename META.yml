@@ -4,6 +4,7 @@ author:
   - 'Thomas Berger <ThB@gymel.com>'
 build_requires:
   SeeAlso::Identifier::GND: 0.54
+  Test::Command::Simple: 0
   Test::More: 0.94
   URI::file: 1.0
 configure_requires:
@@ -18,13 +19,13 @@ name: SeeAlso-Source-BeaconAggregator
 provides:
   SeeAlso::Source::BeaconAggregator:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
-    version: 0.2_74
+    version: 0.2_75
   SeeAlso::Source::BeaconAggregator::Maintenance:
     file: lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm
-    version: 0.2_74
+    version: 0.2_75
   SeeAlso::Source::BeaconAggregator::Publisher:
     file: lib/SeeAlso/Source/BeaconAggregator/Publisher.pm
-    version: 0.2_74
+    version: 0.2_75
 recommends:
   Getopt::Long: 0
   LWP: 5.827
@@ -48,4 +49,4 @@ requires:
   perl: v5.8.2
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.2_74
+version: 0.2_75

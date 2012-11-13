@@ -11,7 +11,7 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.2_74';
+our $VERSION = '0.2_75';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;
@@ -31,7 +31,7 @@ my $verbose = 1;
 my $ignore_header_errors = 0;
 my $action = "list";
 my $dbroot = "./beacondbs";
-my ($dsn, $cache_size);
+my ($dsn, $cache_size, @pragmas);
 my ($distinct, $force, $keeposd, $quiet, $dbfile, $itype, $redirs);
 
 #  Application constants
@@ -63,6 +63,7 @@ Options:
   --ignore-header-errors  [for update and load]
   --distinct  [for idcounts and idstat]
 
+  --pragma [SQLite pragma]  (repeatable)
   --cache_size  [SQLite pragma]
 
 Actions and Arguments:
@@ -101,6 +102,8 @@ Actions and Arguments:
   deflate       Apply VACUUM and REINDEX on SqLite Db 
 
   version       gives versions numbers of involved modules
+
+  noop
 
 =cut
 
@@ -170,6 +173,7 @@ GetOptions (
   'dbfile=s' => \$dbfile,
   'dbroot=s' => \$dbroot,
   'cache_size=s' => \$cache_size,
+  'pragma=s' => \@pragmas,
   'dsn=s' => \$dsn,
 ) or pod2usage({-message => 'Invalid option encountered', -exitval => 2});
 
@@ -234,6 +238,18 @@ my $db = SeeAlso::Source::BeaconAggregator::Maintenance->new(
     ) or die "could not open database $dsn / $dbfile";
 
 $db->{dbh}->do("PRAGMA cache_size = $cache_size;") or die "could not set cache_size to $cache_size" if defined $cache_size;
+
+foreach my $pragma ( @pragmas ) {
+    $pragma =~ s/^(['"])(.+)\1$/$2/;
+    $pragma =~ s/\s*;\s*$//;
+    print "execute 'PRAGMA $pragma;':\n" if $verbose;
+    my $prows = $db->{dbh}->selectall_arrayref("PRAGMA $pragma;") or warn "trouble executing 'PRAGMA $pragma;'";
+#   my $i;
+    foreach my $rowref ( @$prows ) {
+#       warn "[".++$i."] - "."@$rowref\n";
+        print "@$rowref\n";
+      };
+  };
 
 =head2 Actions
 
@@ -824,10 +840,9 @@ elsif ( $action eq "deflate" ) {
     $db->deflate}
 
 
-=item C<loadmeta>
+=item C<version>
 
-Completely exchanges the OSD and beacon meta files for the 
-database by the contents of the file given as first argument.
+Dump some version numbers
 
 =cut
 
@@ -838,6 +853,16 @@ elsif ( $action eq "version" ) {
     print "SeeAlso::Identifier version $SeeAlso::Identifier::VERSION\n";
     print "SeeAlso::Identifier::GND version $SeeAlso::Identifier::GND::VERSION\n";
   }
+
+=item C<noop>
+
+Do nothing (you may want for exit status or use some --pragma's)
+
+=cut
+
+elsif ( $action eq "noop" ) {
+    print "OK!\n" if $verbose;
+}
 
 =back
 

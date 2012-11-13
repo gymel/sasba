@@ -22,6 +22,8 @@ my $build = Module::Build->new(
       SeeAlso::Identifier::GND	=> '0.54',
 		    Test::More	=> '0.94',
 		     URI::file	=> '1.0',
+#         Test::Command::Simple	=> 0,
+          Test::Command::Simple	=> 0,
 		},
    configure_requires => {
 		 Module::Build  => '0.35',

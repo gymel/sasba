@@ -17,6 +17,7 @@
       "build" : {
          "requires" : {
             "SeeAlso::Identifier::GND" : "0.54",
+            "Test::Command::Simple" : 0,
             "Test::More" : "0.94",
             "URI::file" : "1.0"
          }
@@ -55,15 +56,15 @@
    "provides" : {
       "SeeAlso::Source::BeaconAggregator" : {
          "file" : "lib/SeeAlso/Source/BeaconAggregator.pm",
-         "version" : "0.2_74"
+         "version" : "0.2_75"
       },
       "SeeAlso::Source::BeaconAggregator::Maintenance" : {
          "file" : "lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm",
-         "version" : "0.2_74"
+         "version" : "0.2_75"
       },
       "SeeAlso::Source::BeaconAggregator::Publisher" : {
          "file" : "lib/SeeAlso/Source/BeaconAggregator/Publisher.pm",
-         "version" : "0.2_74"
+         "version" : "0.2_75"
       }
    },
    "release_status" : "testing",
@@ -72,5 +73,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.2_74"
+   "version" : "0.2_75"
 }

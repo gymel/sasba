@@ -19,6 +19,7 @@ WriteMakefile
                    'SeeAlso::Response' => '0.54',
                    'SeeAlso::Server' => '0.57',
                    'SeeAlso::Source' => '0.56',
+                   'Test::Command::Simple' => 0,
                    'Test::More' => '0.94',
                    'URI::file' => '1.0'
                  },

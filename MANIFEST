@@ -24,6 +24,7 @@ t/070_examples.t
 t/080_publish.t
 t/085_beacon.t
 t/090_maintenance.t
+t/095_sasbactrl.t
 t/099_unload.t
 t/beacon1.txt
 t/beacon2.txt

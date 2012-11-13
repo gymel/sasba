@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_74";
+our $VERSION = "0.2_75";
 
 =head1 NAME
 
@@ -595,16 +595,18 @@ sub sources {          # Liste der Beacon-Header fuer Treffer
             }
         };
       $idlist{$pretty} = "queriedid";
-      if ( $clusterid eq $hash ) {
-          $idlist{$pretty} .= " preferredid"}
-      elsif ( $c ) {
-          $c->value("");
-          my $did = $c->hash($clusterid) || $c->value($clusterid);
-          my $p = $c->can("pretty") ? $c->pretty() : $c->value();
-          $idlist{$p} = "variantid preferredid";
-        }
-       else {
-          $idlist{$clusterid} = "variantid preferredid";
+      if ( $clusterid ) {
+          if ( $clusterid eq $hash ) {
+              $idlist{$pretty} .= " preferredid"}
+          elsif ( $c ) {
+              $c->value("");
+              my $did = $c->hash($clusterid) || $c->value($clusterid);
+              my $p = $c->can("pretty") ? $c->pretty() : $c->value();
+              $idlist{$p} = "variantid preferredid";
+            }
+           else {
+              $idlist{$clusterid} = "variantid preferredid";
+            }
         }
     }
 

@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_74';
+    $VERSION     = '0.2_75';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -749,11 +749,14 @@ sub processbeaconheader {
 
   if ( my $alias = $fieldref->{_alias} ) {
       my $stampfield = SeeAlso::Source::BeaconAggregator->beaconfields("TIMESTAMP");
-      my ($listh, $listexpl) = $self->stmtHdl("SELECT seqno, $stampfield, mtime, counti FROM repos WHERE alias=?;");
+      my ($listh, $listexpl) = $self->stmtHdl("SELECT seqno, $stampfield, mtime, counti, countu FROM repos WHERE alias=?;");
       $self->stmtExplain($listexpl, $alias) if $ENV{'DBI_PROFILE'};
       $listh->execute($alias) or croak("Could not execute >".$listh->{Statement}."<: ".$listh->errstr);
+      my ($rowcnt, $ocounti, $ocountu);
       while ( my($row) = $listh->fetchrow_arrayref ) {
           last unless defined $row;
+          $rowcnt ++;
+          ($ocounti, $ocountu) = ($row->[3], $row->[4]);
           if ( $options{'verbose'} ) {
               print "* Old Instances for $alias:\n" unless $osq;
               $osq = $row->[0];
@@ -761,6 +764,10 @@ sub processbeaconheader {
             }
           else {
               $osq = $row->[0]};
+        }
+      if ( $rowcnt && ($rowcnt == 1) ) {
+          $fieldref->{_counti} ||= $ocounti if $ocounti;
+          $fieldref->{_countu} ||= $ocountu if $ocountu;
         }
     };
 

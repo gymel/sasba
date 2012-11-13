@@ -1,5 +1,10 @@
 Revision history for Perl module SeeAlso::Source::BeaconAggregator
 
+0.02_75 2012-11-13
+    - more intelligently reuse global counts
+    - repeatable --pragma args for sasbactrl (get / set: simply piped thru)
+    - tests for sasbactrl (need optional Test::Command::Simple)
+
 0.02_72 2012-09-28
     - cache global counts in admin table
 
