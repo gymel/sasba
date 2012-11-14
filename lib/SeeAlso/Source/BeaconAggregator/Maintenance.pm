@@ -358,7 +358,9 @@ XxX
 #     $admref =  $self->admhash();
     }
 
+  print "[ANALYZE ..." if $options{'verbose'};
   $hdl->do("ANALYZE;");
+  print "]\n" if $options{'verbose'};
   return 1;    # o.k.
 };
 
@@ -711,7 +713,11 @@ XxX
   close(BKN);
 
   if ( $numchg or $options{'force'} ) {
-      $self->{dbh}->do("ANALYZE;") if $options{'force'};
+      if ( $options{'force'} ) {
+          print "[ANALYZE ..." if $options{'verbose'};
+          $self->{dbh}->do("ANALYZE;");
+          print "]\n" if $options{'verbose'};
+        };
 
       $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
       $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
@@ -1248,7 +1254,11 @@ XxX
   $rows = 0 if $rows eq "0E0";
 
   if ( $rows or $options{'force'} ) {
-      $self->{dbh}->do("ANALYZE;") if $options{'force'};
+      if ( $options{'force'} ) {
+          print "[ANALYZE ..." if $options{'verbose'};
+          $self->{dbh}->do("ANALYZE;");
+          print "]\n" if $options{'verbose'};
+        };
 
       $self->admin('gcounti', $self->idStat(0, distinct => 0) || 0);
       $self->admin('gcountu', $self->idStat(0, distinct => 1) || 0);
@@ -1321,7 +1331,11 @@ XxX
     };
 
   if ( $trows or $options{'force'} ) {
-      $self->{dbh}->do("ANALYZE;") if $options{'force'};
+      if ( $options{'force'} ) {
+          print "[ANALYZE ..." if $options{'verbose'};
+          $self->{dbh}->do("ANALYZE;");
+          print "]\n" if $options{'verbose'};
+        };
 
       $self->admin('gcounti', $self->idStat(0, distinct => 0) || 0);
       $self->admin('gcountu', $self->idStat(0, distinct => 1) || 0);
@@ -1646,16 +1660,16 @@ XxX
 
 =head2 Manipulation of global metadata: Open Search Description
 
-=head3 setOSD ( $field, $value }
+=head3 setOSD ( $field, @values }
 
-Sets the field $field of the OpenSearchDescription to $value.
+Sets the field $field of the OpenSearchDescription to @value(s).
 
 =cut
 
 sub setOSD {
   my ($self) = shift;
-  $self->clearOSD(@_) or return undef;
-  return (defined $_[1]) ? $self->addOSD(@_) : 0;     # value to set
+  $self->clearOSD($_[0]) or return undef;
+  return (defined $_[1]) ? $self->addOSD(@_) : 0;     # value(s) to set
 };
 
 =head3 clearOSD ( $field }
@@ -1676,22 +1690,24 @@ XxX
   return 1;
 }
 
-=head3 addOSD ( $field, $value }
+=head3 addOSD ( $field, @values }
 
-Appends $value the (repeatable) field $field of the OpenSearchDescription.
+Adds more @value(s) as (repeatable) field $field of the OpenSearchDescription.
 
 =cut
 
 sub addOSD {
-  my ($self, $field, $value) = @_;
+  my ($self, $field, @values) = @_;
   $field || (carp("no OSD field name provided"), return undef);
+  return 0 unless @values;
   defined $self->osdKeys($field) || (carp("no valid OSD field '$field'"), return undef);
   my ($sth, $sthexpl) = $self->stmtHdl(<<"XxX");
 INSERT INTO osd ( key, val ) VALUES ( ?, ? );
 XxX
-  $self->stmtExplain($sthexpl, $field, $value) if $ENV{'DBI_PROFILE'};
-  $sth->execute($field, $value) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
-  return 1;
+  $self->stmtExplain($sthexpl, $field, $values[0]) if $ENV{'DBI_PROFILE'};
+  my $tstatus = [];
+  my $tuples = $sth->execute_array({ArrayTupleStatus => $tstatus}, $field, \@values) or croak("Could not execute >".$sth->{Statement}."<: ".$sth->errstr);
+  return $tuples;
 }
 
 =head2 Manipulation of global metadata: Beacon Metadata

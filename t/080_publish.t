@@ -30,7 +30,11 @@ subtest "cast existing object" => sub {
 subtest "get_meta" => sub {
 	plan tests => 5;
 	my $expected_osd = {
-		Tags => ["hits", "some encountered"],
+		'Tags' => ["hits", "more hits",
+                           "some encountered",
+                           "added more hits", "added even more hits",
+                           "added more hits", "added last hits",
+                          ],
 	};
 	my $expected_meta = {
 		MESSAGE => ' encountered',
