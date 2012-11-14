@@ -240,7 +240,7 @@ $db->{dbh}->do("PRAGMA cache_size = $cache_size;") or die "could not set cache_s
 foreach my $pragma ( @pragmas ) {
     $pragma =~ s/^(['"])(.+)\1$/$2/;
     $pragma =~ s/\s*;\s*$//;
-    print "execute 'PRAGMA $pragma;':\n" if $verbose;
+#   print "execute 'PRAGMA $pragma;':\n" if $verbose;
     my $prows = $db->{dbh}->selectall_arrayref("PRAGMA $pragma;") or warn "trouble executing 'PRAGMA $pragma;'";
 #   my $i;
     foreach my $rowref ( @$prows ) {

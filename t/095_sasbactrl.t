@@ -42,7 +42,7 @@ SKIP: {
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "--pragma", 'schema_version', "noop");
     is(rc >> 8, 0, "ask for pragma 'schema_version': ".stderr);
     is(stderr, "", "warnings on query for 'schema_version': ".stderr);
-    (undef, $line) = split(/\r?\n/, stdout, 3);
+    ($line) = split(/\r?\n/, stdout, 2);
     like($line, qr/^\d+$/, "query schema_version: ($line)");
 
 # Test schema_version
@@ -50,20 +50,20 @@ SKIP: {
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "--pragma", 'user_version', "noop");
     is(rc >> 8, 0, "ask for pragma 'user_version': ".stderr);
     is(stderr, "", "warnings on query for 'user_version': ".stderr);
-    (undef, $line) = split(/\r?\n/, stdout, 3);
+    ($line) = split(/\r?\n/, stdout, 2);
     like($line, qr/^\d*$/, "query user_version: ($line)");
     my $uvalue = ($line || 0) + 3;
 
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "--pragma", '"user_version='.$uvalue.'"', "noop");
     is(rc >> 8, 0, "set pragma 'user_version': ".stderr);
     is(stderr, "", "warnings on setting 'user_version': ".stderr);
-    (undef, $line) = split(/\r?\n/, stdout, 3);
+    ($line) = split(/\r?\n/, stdout, 2);
     is($line, "OK!", "set user_version");
 
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "--pragma", 'user_version', "noop");
     is(rc >> 8, 0, "recheck pragma 'user_version': ".stderr);
     is(stderr, "", "warnings on query for 'user_version': ".stderr);
-    (undef, $line) = split(/\r?\n/, stdout, 3);
+    ($line) = split(/\r?\n/, stdout, 2);
     is($line, $uvalue, "recheck user_version: ($line should be $uvalue)");
 
 
@@ -72,27 +72,27 @@ SKIP: {
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "--pragma", 'cache_size', "noop");
     is(rc >> 8, 0, "ask for pragma 'cache_size': ".stderr);
     is(stderr, "", "warnings on query for 'cache_size': ".stderr);
-    (undef, $line) = split(/\r?\n/, stdout, 3);
+    ($line) = split(/\r?\n/, stdout, 2);
     like($line, qr/^\d*$/, "query cache_size: ($line)");
     my $cvalue = int($line / 3);
 
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "--cache_size", "4000", "--pragma", 'cache_size', "noop");
     is(rc >> 8, 0, "ask for pragma 'cache_size' just set: ".stderr);
     is(stderr, "", "warnings on query for 'cache_size': ".stderr);
-    (undef, $line) = split(/\r?\n/, stdout, 3);
+    ($line) = split(/\r?\n/, stdout, 2);
     is($line, 4000, "check cache_size just set: ($line should be 4000)");
 
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "--pragma", "'cache_size = $cvalue'", "noop");
     is(rc >> 8, 0, "set pragma 'cache_size': ".stderr);
     is(stderr, "", "warnings on setting 'cache_size': ".stderr);
-    (undef, $line) = split(/\r?\n/, stdout, 3);
+    ($line) = split(/\r?\n/, stdout, 2);
     is($line, "OK!", "set cache_size");
 
 # set again, then read: cache_size is not persistant...
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "--pragma", "'cache_size = $cvalue'", "--pragma", "cache_size", "noop");
     is(rc >> 8, 0, "recheck pragma 'cache_size': ".stderr);
     is(stderr, "", "warnings on query for 'cache_size': ".stderr);
-    (undef, undef, $line) = split(/\r?\n/, stdout, 4);
+    ($line) = split(/\r?\n/, stdout, 2);
     is($line, $cvalue, "recheck cache_size: ($line should be $cvalue)");
 
 # admin
