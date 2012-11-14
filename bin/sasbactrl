@@ -879,46 +879,38 @@ sub refreshOSD {    #
     my ($doexamples) = @_;
     my $anyref = $db->RepoCols();
     my $repcnt = scalar keys %$anyref;
-    print "Refreshing OSD data from $repcnt sources";
+    print "Refreshing OSD data from $repcnt sources: ";
 
     if ( $force && $doexamples ) {
-        print " ... ANALYZE" if $verbose;
+        print "ANALYZE... " if $verbose;
         $db->{dbh}->do("ANALYZE;");
       };
 
-    print " ... DateModified" if $verbose;
+    print "DateModified... " if $verbose;
     $db->setOSD("DateModified", time());
 
     my $gcountu = $db->admin('gcountu') || $db->idStat(undef, distinct => 1) || 0;
 
-    print " ... Description[" if $verbose;
+    print "collect Descriptions... " if $verbose;
     my %descr;
     my $countref = $db->RepoCols("_countu");
-    print "_countu/" if $verbose;
     my $aliasref = $db->RepoCols("_alias");
-    print "_alias/" if $verbose;
     my $sortref = $db->RepoCols("_sort");
-    print "_sort/" if $verbose;
     foreach ( keys %$aliasref ) {
         $sortref->{$_} ||= $aliasref->{$_}};
     my $textref = $db->RepoCols("NAME");
-    print "NAME/" if $verbose;
     foreach ( keys %$textref ) {
         $descr{$_} ||= $textref->{$_} if defined $textref->{$_}};
     $textref = $db->RepoCols("DESCRIPTION");
-    print "DESCRIPTION/" if $verbose;
     foreach ( keys %$textref ) {
         $descr{$_} ||= $textref->{$_} if defined $textref->{$_}};
     $textref = $db->RepoCols("INSTITUTION");
-    print "INSTITUTION/" if $verbose;
     foreach ( keys %$textref ) {
         $descr{$_} ||= $textref->{$_} if defined $textref->{$_}};
     $textref = $db->RepoCols("FEED");
-    print "FEED/" if $verbose;
     foreach ( keys %$textref ) {
         $descr{$_} ||= $textref->{$_} if defined $textref->{$_}};
     $textref = $db->RepoCols("_alias");
-    print "_alias]" if $verbose;
     foreach ( keys %$textref ) {
         $descr{$_} ||= "Listed by $textref->{$_}" if defined $textref->{$_}};
     foreach ( keys %$countref ) {
@@ -931,27 +923,28 @@ sub refreshOSD {    #
           };
       };
     my $rcount = scalar keys %descr;
-    print " ... setOSD" if $verbose;
+    print "set Descriptions... " if $verbose;
     $db->setOSD("Description", "Currently serving $gcountu distinct identifiers from $rcount beacon sources:\n -- "
                                .join(".\n -- ", map { $descr{$_} } sort { $sortref->{$a} cmp $sortref->{$b} } keys %descr)
                );
 
-    print " ... Source" if $verbose;
     my $srcref = $db->RepoCols("FEED");
     my @vals =  map { ($_ && /\S/) ? ($_) : () } values %$srcref;
+    print "set Sources... " if $verbose;
     $db->setOSD("Source", @vals);
 
     unless ( $doexamples ) {
-        print "... (skipping examples) ... done\n";
+        print "(skipping examples) ... done\n";
         return 1;
       };
 
     return 1 unless $repcnt;     # no repositories => no examples
 
-    print " ... Examples from Sources [" if $verbose;
+    print "Examples from Sources [" if $verbose;
     $db->clearOSD("Examples");
     my (%seen, %covered);
     my $explref = $db->RepoCols("EXAMPLES");
+    my $max = 0;
     foreach my $sq ( sort {$b <=> $a} keys %$explref ) {
         my $expl = $explref->{$sq};
         next unless defined $expl;
@@ -983,6 +976,7 @@ sub refreshOSD {    #
             next unless $new;
             print "+" if $verbose;
             $db->addOSD("Examples", "$id|$i/$j");
+            $max = $i if $i > $max;
             last;
          };
         print " " if $verbose;
@@ -992,14 +986,16 @@ sub refreshOSD {    #
     my $k = sprintf("%.0f", exp(log($repcnt)*4/5));  # 4 out of 5, 23 out of 50, 40 out of 100
     $k = $EXAMPLEGOAL if $EXAMPLEGOAL and ($k > $EXAMPLEGOAL);
     print " [goal: clusters of size >$k:" if $verbose;
-    my ($i, $eref);
-    my $j = 1;
+    my $eref;
+    my $i = $max || 0;
+    my $j = $i +1;
     my $sthcache = "";
+    print " $i" if $i && $verbose;
     while ( ($j <= $k) and (my $tmperef = $db->findExample($j, 0, $sthcache)) ) {
         $eref = $tmperef;
 	$eref->{response} =~ /^(\d+)\b/;
         my $this = $1 || $j;
-        print "$this " if $verbose;
+        print " $this" if $verbose;
         $i = $this;
 	$j = $this +1;
       };
@@ -1007,7 +1003,9 @@ sub refreshOSD {    #
     print "]" if $verbose;
     while ( $i ) {
         print " ($i)" if $verbose;
-        $seen{$eref->{id}} || $db->addOSD("Examples", $eref->{id}."|".$eref->{response});
+        if ( $eref ) {
+            $seen{$eref->{id}} || $db->addOSD("Examples", $eref->{id}."|".$eref->{response})};
+        last if $i <= $EXAMPLEGOAL;  # no more examples if max is max...
         $i = $EXAMPLEGOAL if $EXAMPLEGOAL and ($i > $EXAMPLEGOAL);
         print "[10?]" if $verbose;
         ($eref =     $db->findExample($i,  10, $sthcache)) ? $db->addOSD("Examples", $eref->{id}."|".$eref->{response})
@@ -1025,7 +1023,7 @@ sub refreshOSD {    #
         ($eref = $db->findExample($i, 1000000, $sthcache)) ? $db->addOSD("Examples", $eref->{id}."|".$eref->{response}) : last;
         $i = 0;
       };
-    print " ... done\n";
+    print " done\n";
     return 1;
 }
 
