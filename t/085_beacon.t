@@ -26,6 +26,7 @@ my $expect = << "XxX";
 #FEED: http://beacon.example.com/test/?format=beacon
 #MESSAGE: encountered
 #X-REVISION: 3 [2011-05-19T21:21:04Z]
+#X-EXTENT: 5 unique identifiers 
 XxX
 
 my $tpattern = '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z';
@@ -33,7 +34,7 @@ my %hexpected;
 
 # dumpmeta
 subtest "dumpmeta w/o REVISIT" => sub {
-    plan tests => 27;
+    plan tests => 30;
 
     my($error, $resultref) = $use->dumpmeta( # cgibase unAPIformatname headers_only {preset}
         "http://beacon.example.com/test/",
@@ -60,7 +61,7 @@ subtest "dumpmeta w/o REVISIT" => sub {
         my($key, $val) = ($1, $2);
         $val =~ s/\s+$//g;
         if ( ok($expecthash{$key}, "unexpected key '$key'!")
-          && ok($val =~ m!^$expecthash{$key}$!, "expected value for key $key") ) {
+          && ok($val =~ m!^$expecthash{$key}$!, "expected value for key $key (got '$val')") ) {
             $hexpected{$key} = quotemeta($val)};
         delete $expecthash{$key};
       }
@@ -70,7 +71,7 @@ subtest "dumpmeta w/o REVISIT" => sub {
 
 #beacon
 subtest "beacon with REVISIT" => sub {
-    plan tests => 43;
+    plan tests => 46;
 
     my %bexpected = (   # count column is the number of sequences which contain the identifier!
       '118784226' => [2],
@@ -120,7 +121,7 @@ subtest "beacon with REVISIT" => sub {
             next;
           }
         unless ( $inbody ) {
-            is(--$inheader, 9, 'count header lines');
+            is(--$inheader, 10, 'count header lines');
             $inheader = 0;
           };
         $inbody ++;

@@ -723,9 +723,9 @@ elsif ( ($action eq "dumpmeta") or ($action eq "beacon") ) {
     my $cgibase = shift @ARGV;
     unless ( $cgibase ) {
         if ( $action eq "beacon" ) {
-            die "You MUST provide a cgi base address\n"}
+            die "ERROR: You MUST provide a cgi base address\n"}
         else {
-            warn "You will have to provide a cgi base address\n"}
+            warn "WARNING: You will have to provide a cgi base address\n"}
       };
     require SeeAlso::Source::BeaconAggregator::Publisher or die "could not require Publisher extension";
     SeeAlso::Source::BeaconAggregator::Publisher->activate();   # "recast" all objects

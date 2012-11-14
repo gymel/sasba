@@ -268,6 +268,12 @@ XxX
       my ($sq, $ut) = @$aryref;
       push(@result, "#X-REVISION: $sq [".SeeAlso::Source::BeaconAggregator::tToISO($ut)."]\n") if $sq;
     };
+  my $admref = $self->admhash();
+  if ( my $cu = $admref->{'gcountu'} ) {
+      my $type = $admref->{'IDENTIFIER_CLASS'} || "";
+      push(@result, "#X-EXTENT: $cu unique identifiers".($type ? " of type $type" : "")."\n");
+    };
+
 
 ## PND-BEACON
 #                CONTACT => ['VARCHAR(63)'],
