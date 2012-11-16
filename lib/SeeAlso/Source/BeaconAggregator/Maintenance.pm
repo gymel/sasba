@@ -1094,15 +1094,23 @@ XxX
       my ($tmpfh, $tmpfile) = File::Temp::tempfile("BeaconAggregator-XXXXXXXX", SUFFIX => ".txt", TMPDIR => 1) or croak("Could not acquire temporary file for storage");
       my $contref;   # reference to content buffer
       if ( ! $response->content_is_text ) {
-          carp("Response content is ", $response->content_type, ", not text/*");
+          my $ct = $response->content_type;
+          print "WARNING: Response content is $ct, not text/*\n";
+          if ( my $ce = $response->content_encoding ) {
+              print "NOTICE: Response is also Content-encoded: $ce\n"}
+          my $ctt = join("|", $response->decodable());
+          if ( $ct =~ s!^(.+\/)?($ctt)$!$2! ) {
+      # yes: decode anyway since it could be a gzip-encoded .txt.gz file!
+              my $cr = $response->decoded_content( raise_error => 1, ref => 1);   # method exists since LWP 5.802 (2004-11-30)
+              $response->remove_content_headers;
+              my $newresp = HTTP::Response->new($response->code, $response->message, $response->headers);
+              $newresp->content_type("text/plain; charset: $charset");
+              $newresp->content_encoding($ct);
+              $newresp->content_ref($cr);
+              $response = $newresp;
+            }
         };
-      if ( $response->can("decoded_content") ) {
-          $contref = $response->decoded_content( raise_error => 1, ref => 1);
-        }
-      else {
-          $contref = $response->content_ref;
-          carp("please upgrade to LWP >= 5.817 for compression handling") if $options{'verbose'} && (!$lwpcarp817++);
-        };
+      $contref = $response->decoded_content( raise_error => 1, ref => 1);   # method exists since LWP 5.802 (2004-11-30)
 
       if ( $$contref =~ /^\x{FFEF}/ ) {          # properly encoded BOM => put Characters to file
           binmode($tmpfh, ":utf8");

@@ -10,6 +10,7 @@ my $build = Module::Build->new(
 			   CGI	=> '3.0',
 		    HTTP::Date	=> '1.46',    # '5.0',
 		 HTTP::Request	=> '1.40',    # '5.0',
+			   LWP	=> '5.802',
 		LWP::UserAgent	=> '2.031',
 			   DBI	=> '1.57',
 		   DBD::SQLite	=> '1.25',

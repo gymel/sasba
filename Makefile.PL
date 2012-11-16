@@ -13,6 +13,7 @@ WriteMakefile
                    'File::Temp' => 0,
                    'HTTP::Date' => '1.46',
                    'HTTP::Request' => '1.40',
+                   'LWP' => '5.802',
                    'LWP::UserAgent' => '2.031',
                    'SeeAlso::Identifier' => '0.46',
                    'SeeAlso::Identifier::GND' => '0.54',
