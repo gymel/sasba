@@ -774,16 +774,22 @@ XxX
           if ( $repos->{'IMGTARGET'} ) {
               $guri = sprintf($repos->{'IMGTARGET'}, $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
 
-          my $rlabel =  $repos->{'MESSAGE'} || $repos->{'DESCRIPTION'} || $repos->{'NAME'} || $repos->{'INSTITUTION'} || "???";
+          my @labels = grep /\S/, $repos->{'NAME'}, $repos->{'DESCRIPTION'}, $repos->{'INSTITUTION'};
+          my $rlabel;
           if ( $hits == 1 ) {
               $rlabel = $repos->{'ONEMESSAGE'} if $repos->{'ONEMESSAGE'}}
           elsif ( $hits == 0 ) {
               $rlabel = $repos->{'SOMEMESSAGE'} if $repos->{'SOMEMESSAGE'}};
+          unless ( $rlabel ) {
+              $rlabel = $repos->{'MESSAGE'} || shift @labels || "???"};
           my $label = sprintf($rlabel, $hits);
+
+          my $ttip = pop @labels || "";
+          $ttip =~ s/&#(\d+);/chr($1)/ge;
 
           push(@result, $cgi->a({style=>"float: right; clear: right;", href=>$uri}, $cgi->img({alt=>$vary->{'info'}||$label,src=>$guri}))) if $guri;
 
-          push(@result, $cgi->h2({class=>"label $redundant $variantid ident_$p", id=>"head$aos"}, $cgi->a({href=>$uri}, $label)));
+          push(@result, $cgi->h2({class=>"label $redundant $variantid ident_$p", id=>"head$aos"}, $cgi->a({href=>$uri, title=>$ttip}, $label)));
 
           push(@result, qq!<div class="synopsis" id="syn$aos">!);
           push(@result, $cgi->span($vary->{'info'})) if $vary->{'info'};
@@ -801,11 +807,25 @@ XxX
       else {
           push(@result, $cgi->h3({class=>"hit", onClick=>"mtoggle('res$aos', 'hit')"}, "Result Details"));
           my $hits = scalar @vary;
-          my $rlabel =  $repos->{'SOMEMESSAGE'} || $repos->{'MESSAGE'} || $repos->{'DESCRIPTION'} || $repos->{'NAME'} || $repos->{'INSTITUTION'} || "???";
+
+          my @labels = grep /\S/, $repos->{'NAME'}, $repos->{'DESCRIPTION'}, $repos->{'INSTITUTION'};
+          my $rlabel = $repos->{'MESSAGE'} || shift @labels || "???";
+          my $ttip = pop @labels || "";
+          $ttip =~ s/&#(\d+);/chr($1)/ge;
+
+#          my $rlabel =  $repos->{'SOMEMESSAGE'} || $repos->{'MESSAGE'} || $repos->{'DESCRIPTION'} || $repos->{'NAME'} || $repos->{'INSTITUTION'} || "???";
+
+#          my $ttip = $repos->{'MESSAGE'} ? $repos->{'DESCRIPTION'} || $repos->{'NAME'} || $repos->{'INSTITUTION'} || ""
+
+#                                         : $repos->{'INSTITUTION'} || $repos->{'NAME'} || "";
+
+#          $ttip = "" if $ttip eq $rlabel;
+          $ttip =~ s/&#(\d+);/chr($1)/ge;
+
           my $label = sprintf($rlabel, $hits);
           push(@result, $cgi->h2({class=>"label", id=>"head$aos"}, $label));
 
-          push(@result, qq!<dl id="res$aos">!);
+          push(@result, qq!<dl id="res$aos" title="$ttip">!);
           my $cnt = 0;
           foreach my $vary ( @vary ) {
               $cnt ++;
