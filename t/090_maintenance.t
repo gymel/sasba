@@ -25,29 +25,29 @@ subtest "deflate" => sub {
 };
 
 my $file_uri;
-ok($file_uri = ($use->headerfield('bar', '_uri'))[1], 'get file uri');
+ok($file_uri = ($use->headerfield('baz', '_uri'))[1], 'get file uri');
 
 subtest "purge" => sub {
 	plan tests => 15;
         test_counts ("pre-purge",
         	1 => ["foo", undef, "...", 3, 3],
-        	3 => ["bar", $file_uri, "...", 4, 3],
+        	5 => ["baz", $file_uri, "...", 4, 3],
           );
-        ok($use->purge('bar'), 'purge');
+        ok($use->purge('baz'), 'purge');
         test_counts ("post-purge",
         	1 => ["foo", undef, "...", 3, 3],
-        	3 => ["bar", $file_uri, "...", 0, 0],
+        	5 => ["baz", $file_uri, "...", 0, 0],
           );
-        ok($use->headerfield('bar', '_mtime', 0), 'reset mtime');
+        ok($use->headerfield('baz', '_mtime', 0), 'reset mtime');
         test_counts ("post-purge",
         	1 => ["foo", undef, "...", 3, 3],
-        	3 => ["bar", $file_uri, "", 0, 0],
+        	5 => ["baz", $file_uri, "", 0, 0],
           );
         # prepare forced reload
-        ok($use->update('bar'), 'reload');
+        ok($use->update('baz'), 'reload');
         test_counts ("post-update",
         	1 => ["foo", undef, "...", 3, 3],
-        	4 => ["bar", $file_uri, "...", 4, 3],
+        	6 => ["baz", $file_uri, "...", 4, 3],
           );
 };
 
@@ -55,9 +55,9 @@ subtest "unload" => sub {
 	plan tests => 5;
         test_counts ("pre-unload",
         	1 => ["foo", undef, "...", 3, 3],
-        	4 => ["bar", $file_uri, "...", 4, 3],
+        	6 => ["baz", $file_uri, "...", 4, 3],
           );
-        $use->unload('bar');
+        $use->unload('baz');
         test_counts ("post-unload",
         	1 => ["foo", undef, "...", 3, 3],
           );

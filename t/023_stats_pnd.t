@@ -81,14 +81,14 @@ is("@cexcess", "", "undelivered identifiers for distinct idCounts");
 # idList
 my %iexpected = (
   '118784226' => {"1:" => ["", "", "", ""], 
-                  "3:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
+                  "5:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
                  },
   '132464462' => {"1:" => [1, "", "", ""]},
   '118624458' => {"1:" => [2, "", "", ""]},
-  '103117741' => {"3:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
-                  "3:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"]
+  '103117741' => {"5:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
+                  "5:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"]
                  },
-  '118559796' => {"3:" =>, ["", "", "", ""]},
+  '118559796' => {"5:" =>, ["", "", "", ""]},
 );
 while ( my (@ilist) = $use->idList() ) {
     ok(@ilist > 1, 'idList gave a tuple');

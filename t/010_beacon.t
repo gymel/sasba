@@ -2,7 +2,7 @@
 
 # t/010_beacon.t - check module loading and create testing directory
 
-use Test::More tests => 15;
+use Test::More tests => 18;
 use URI::file;
 use LWP::UserAgent;
 use HTTP::Request;
@@ -89,12 +89,33 @@ subtest 'update' => sub {
 };
 
 
+my $gzfile = "t/beacon4.txt.gz";
+my $gzfile_uri = URI::file->new_abs($gzfile);
+# get non-text files
+subtest 'gzipped' => sub {
+	plan tests => 5;
+	($seqno, $rec_ok) = $use->update("baz", {_uri => $gzfile_uri}, verbose => 1);
+	ok(defined $seqno, "load beacon file as uri from $file_uri (update)");
+	ok($seqno && ($seqno > 0), "something gzipped was loaded");
+	is($seqno, 4, "expected seqno");
+	ok($rec_ok  && ($rec_ok > 0), "gzipped records loaded");
+	is($rec_ok, 4, "number of unique records loaded");
+};
+
+# purge
+subtest 'purge' => sub {
+	plan tests => 3;
+	my $rec_del = $use->purge("baz");
+	ok(defined $rec_del, "purged beacon file");
+	ok($rec_del && ($rec_del > 0), "something was purged");
+	is($rec_del, 4, "expected number of deleted records");
+};
 
 # Seqnos
 subtest 'Seqnos' => sub {
 	plan tests => 2;
 	my @seqnos = $use->Seqnos('TARGET', '%deutsche-biographie%');
-	is(scalar @seqnos, 1, 'number of targets');
+	is(scalar @seqnos, 2, 'number of targets');
 	is($seqnos[0], 3, 'correct sequence met');
 };
 
@@ -108,6 +129,7 @@ subtest 'RepoCols' => sub {
 	my $expected = {
 		1 => "foo",
 		3 => "bar",
+		4 => "baz",
 	};
 	is_deeply($cols[0], $expected, 'expected RepoCols');
 };
@@ -145,7 +167,7 @@ subtest 'headerfield with args' => sub {
 
 # headers
 subtest 'headers' => sub {
-	plan tests => 9;
+	plan tests => 13;
 #	(my $file1_uri = $file_uri) =~ s/beacon2.txt/beacon1.txt/;
 	my %expected = (
 	1 => [{ VERSION => 0.1,
@@ -177,6 +199,21 @@ subtest 'headers' => sub {
 		_fstat => '4 replaced, 0 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored',
 		_ustat => 'successfully loaded',
 	      }],
+	4 => [{ VERSION => 0.1,
+		FORMAT => 'BEACON',
+		REMARK => 'Some test records',
+		PREFIX => 'http://d-nb.info/gnd/{ID}',
+		TARGET => 'http://www.deutsche-biographie.de/pnd{ID}.html',
+		ALTTARGET => 'http://www.hls-dhs-dss.ch/textes/d/D{ALTID}.php',
+	      },
+	      {	_seqno => 4,
+		_alias => 'baz',
+		_uri => $gzfile_uri, _ruri => $gzfile_uri,
+		_mtime => 'xxxx-xx-xxTxx:xx:xxZ', _ftime => 'xxxx-xx-xxTxx:xx:xxZ', _utime => 'xxxx-xx-xxTxx:xx:xxZ',
+		_counti => 0, _countu => 0,
+		_fstat => '0 replaced, 4 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored',
+		_ustat => 'purged',
+	      }],
 	);
 	while ( my ($resultref, $metaref) = $use->headers() ) {
 	     last unless defined $resultref;
@@ -188,7 +225,7 @@ subtest 'headers' => sub {
 	     $metaref->{_mtime} =~ s/\d/x/g if $metaref->{_mtime};
 	     $metaref->{_ftime} =~ s/\d/x/g if $metaref->{_ftime};
 	     $metaref->{_utime} =~ s/\d/x/g if $metaref->{_utime};
-	     is_deeply($metaref, $exp->[1], 'expected meta');
+	     is_deeply($metaref, $exp->[1], "expected meta ($seq)");
 	     delete $expected{$seq};
 	  };
 	is(scalar keys %expected, 0, 'all eaten up');
@@ -198,18 +235,19 @@ subtest 'headers' => sub {
 # headers
 # listCollections
 subtest 'listCollections' => sub {
-	plan tests => 7;
+	plan tests => 10;
 	my %expected = (  # Seqno, Alias, Uri, Mtime, Counti, Countu
 	1 => [1, "foo", undef, "...", 3, 3],
 	3 => [3, "bar", $file_uri, "...", 4, 3],
+	4 => [4, "baz", $gzfile_uri, "...", 0, 0],
 	);
 	while ( my @row = $use->listCollections() ) {
 	     my $seq;
 	     ok($seq = $row[0], 'nonzero sequence number');
 	     my $exp;
-	     ok($exp = $expected{$seq}, "expected sequence number");
+	     ok($exp = $expected{$seq}, "expected sequence number ($seq)");
 	     $row[3] =~ s/\d+/.../;
-	     is_deeply(\@row, $exp, 'expected result');
+	     is_deeply(\@row, $exp, "expected result ($seq)");
 	     delete $expected{$seq};
 	  };
 	is(scalar keys %expected, 0, 'all eaten up');
@@ -237,5 +275,19 @@ subtest 'admin' => sub {
 	is($use->admin('FOO', 'bar'), "foobar", "FOO was set");	
 	$admref = $use->admin();
 	is_deeply($admref, $expected2);
-  }	
+  };
+
+# unload
+subtest 'update+unload' => sub {
+	plan tests => 5;
+	($seqno, $rec_ok) = $use->update("baz", {}, (force => 1));
+	is($seqno, 5, "seqno was incremented");
+	is($rec_ok, 4, "number of unique records loaded");
+	my ($rows, @oldvals) = $use->headerfield("baz", 'INSTITUTION', 'I Cared');
+
+	my $seq_del = $use->unload("bar");
+	ok(defined $seq_del, "unloaded beacon file");
+	ok($seq_del && ($seq_del > 0), "something was purged");
+	is($seq_del, 1, "expected number of deleted sequences");
+  };
 

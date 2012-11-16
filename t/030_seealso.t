@@ -77,11 +77,11 @@ subtest 'query existing' => sub {
 	is($response->size, 1, "Size of response");
 	is($response->query, "118559796", "normalized query");
 	my($label, $description, $url) = $response->get(0);
-	is($label, "Who Cares", "normalized label");
-	is($description, "Who Cares", "description");
+	is($label, "I Cared", "normalized label");
+	is($description, "I Cared", "description");
 	is($url, "http://www.deutsche-biographie.de/pnd118559796.html", "url");
 	is($response->toJSON(), 
-	   '["118559796",["Who Cares"],["Who Cares"],["http://www.deutsche-biographie.de/pnd118559796.html"]]',
+	   '["118559796",["I Cared"],["I Cared"],["http://www.deutsche-biographie.de/pnd118559796.html"]]',
 	   "JSON string");
   };
 
@@ -105,13 +105,13 @@ subtest 'query with filter' => sub {
 	$response = $use->query('118559796');
 	is($response->size, 1, "Size of unfiltered response");
 	is($response->toJSON(), 
-	   '["118559796",["Who Cares"],["Who Cares"],["http://www.deutsche-biographie.de/pnd118559796.html"]]',
+	   '["118559796",["I Cared"],["I Cared"],["http://www.deutsche-biographie.de/pnd118559796.html"]]',
 	   "JSON string");
 
 	$response = $use->query('118784226');
 	is($response->size, 2, "Size of unfiltered response 2");
 	is($response->toJSON(), 
-	   '["118784226",["Who Cares [de.wikisource.org]","???"],["Who Cares",""],["http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226","http://d-nb.info/gnd/118784226"]]',
+	   '["118784226",["I Cared [de.wikisource.org]","???"],["I Cared",""],["http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226","http://d-nb.info/gnd/118784226"]]',
 	   "JSON string");
 
   };

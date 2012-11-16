@@ -25,7 +25,7 @@ my $expect = << "XxX";
 #TIMESTAMP: 2011-05-19T15:49:19Z
 #FEED: http://beacon.example.com/test/?format=beacon
 #MESSAGE: encountered
-#X-REVISION: 3 [2011-05-19T21:21:04Z]
+#X-REVISION: 5 [2011-05-19T21:21:04Z]
 #X-EXTENT: 5 unique identifiers 
 XxX
 

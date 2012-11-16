@@ -450,6 +450,7 @@ sub loadFile {
 
   my $mtime = (stat(_))[9];
   open(BKN, "<:utf8", $file) or (print "ERROR: cannot read $file\n", return undef);
+  local($.) = 0;
 
   $fields = {} unless $fields;
   $fields->{'_ftime'} ||= time();
@@ -1092,6 +1093,9 @@ XxX
       # temporary file for dumped contents
       my ($tmpfh, $tmpfile) = File::Temp::tempfile("BeaconAggregator-XXXXXXXX", SUFFIX => ".txt", TMPDIR => 1) or croak("Could not acquire temporary file for storage");
       my $contref;   # reference to content buffer
+      if ( ! $response->content_is_text ) {
+          carp("Response content is ", $response->content_type, ", not text/*");
+        };
       if ( $response->can("decoded_content") ) {
           $contref = $response->decoded_content( raise_error => 1, ref => 1);
         }

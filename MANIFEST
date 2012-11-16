@@ -29,4 +29,5 @@ t/099_unload.t
 t/beacon1.txt
 t/beacon2.txt
 t/beacon3.txt
+t/beacon4.txt.gz
 Todo
