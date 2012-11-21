@@ -217,12 +217,12 @@ XxX
       push(@osdexamples, $expl);
     };
 
+  foreach ( grep /^[A-Z]+$/, keys %$preset ) {
+      $beaconmeta{$_} = $preset->{$_}}
 # Mandatory fields
-  push(@result, "#FORMAT: ".($preset->{'FORMAT'} || $beaconmeta{'FORMAT'} || $Defaults{'FORMAT'})."\n");
-  push(@result, "#VERSION: ".($preset->{'VERSION'} || $beaconmeta{'VERSION'} || $Defaults{'VERSION'})."\n");
-  if ( $preset->{'TARGET'} ) {
-      push(@result, "#TARGET: ".$preset->{'TARGET'}."\n")}
-  elsif ( $beaconmeta{'TARGET'} ) {
+  push(@result, "#FORMAT: ".($beaconmeta{'FORMAT'} || $Defaults{'FORMAT'})."\n");
+  push(@result, "#VERSION: ".($beaconmeta{'VERSION'} || $Defaults{'VERSION'})."\n");
+  if ( $beaconmeta{'TARGET'} ) {
       push(@result, "#TARGET: $beaconmeta{'TARGET'}\n")}
   elsif ( $cgibase ) {
       push(@result, "#TARGET: $cgibase?format=$uAformatname&id={ID}\n")}
@@ -233,7 +233,7 @@ XxX
 
   my $timestamp = $preset->{'TIMESTAMP'} || $osd{DateModified} || $^T;
   push(@result, "#TIMESTAMP: ".SeeAlso::Source::BeaconAggregator::tToISO($timestamp)."\n") if $timestamp > 0;
-  my $revisit = ($preset->{'REVISIT'} || $beaconmeta{'REVISIT'} || $Defaults{'REVISIT'}) || "";
+  my $revisit = ($beaconmeta{'REVISIT'} || $Defaults{'REVISIT'}) || "";
   $revisit =~ tr/ //d;
   $revisit =~ s/(\d+)mo\w*/($1*30)."d"/ei;
   $revisit =~ s/(\d+)M\w*/($1*30)."d"/e;
@@ -251,7 +251,7 @@ XxX
   $beaconmeta{'DESCRIPTION'} ||= $self->{Description} || $osd{'Description'};
   $beaconmeta{'NAME'} ||= $self->{ShortName} || $osd{'ShortName'};
   foreach ( grep !/^(FORMAT|REVISIT|TARGET|TIMESTAMP|VERSION)$/, SeeAlso::Source::BeaconAggregator->beaconfields() ) {
-      next unless my $val = $preset->{$_} || $beaconmeta{$_};
+      next unless my $val = $beaconmeta{$_};
       next if $val =~ /^-/;
       $val =~ s/\s+/ /g; $val =~ s/^\s+//; $val =~ s/\s+$//;
       push(@result, "#$_: $val\n");
