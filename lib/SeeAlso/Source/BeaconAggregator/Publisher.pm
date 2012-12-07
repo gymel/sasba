@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_75";
+our $VERSION = "0.2_76";
 
 =head1 NAME
 
@@ -774,7 +774,7 @@ XxX
           if ( $repos->{'IMGTARGET'} ) {
               $guri = sprintf($repos->{'IMGTARGET'}, $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
 
-          my @labels = grep /\S/, $repos->{'NAME'}, $repos->{'DESCRIPTION'}, $repos->{'INSTITUTION'};
+          my @labels = grep /\S/, $repos->{'NAME'} || "", $repos->{'DESCRIPTION'} || "", $repos->{'INSTITUTION'} || "";
           my $rlabel;
           if ( $hits == 1 ) {
               $rlabel = $repos->{'ONEMESSAGE'} if $repos->{'ONEMESSAGE'}}
