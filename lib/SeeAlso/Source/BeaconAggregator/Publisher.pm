@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_76";
+our $VERSION = "0.2_77";
 
 =head1 NAME
 
@@ -724,7 +724,7 @@ XxX
           my (%vary, %repos, %meta);
           while ( my($key, $val) = each %$onerow ) {
               my $pval = $val;
-              unless ( $key =~ /feed|target|uri|link/i ) {
+              unless ( $key =~ /altid|feed|target|uri|link/i ) {
                   $pval =~ s/([<>&"]|[^\x00-\x7f])/'&#'.ord($1).';'/ge if defined $pval};
               if ( $key =~ /time|revisit/i ) {
                   next unless $val;

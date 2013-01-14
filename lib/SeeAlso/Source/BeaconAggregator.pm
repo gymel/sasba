@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_76';
+    $VERSION     = '0.2_77';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -818,7 +818,8 @@ sub urlpseudoescape {     # we don't do a thorough job here, because it is not c
                           # and we must avoid  URL-escaping already escaped content
                           # Therefore we only escape spaces and characters > 127
   local ($_) = @_;
-  $_ = pack("C0a*", $_);  # Zeichen in Bytes zwingen
+#  $_ = pack("C0a*", $_);  # Zeichen in Bytes zwingen
+  utf8::encode($_);       # Zeichen in Bytes zwingen
   # FYI
   # reserved uri characters: [;/?:@&=+$,] by RFC 3986
   # ;=%3B  /=%2F  ?=%3F  :=%3A  @=%40  &=%26  ==%3D  +=%2B  $=%24  ,=%2C
