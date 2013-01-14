@@ -55,7 +55,7 @@ subtest 'LWP framework' => sub {
 	ok($response->is_success, 'successfully loaded file');
 
 	my $contref = $response->content_ref;
-	is(length($$contref), 581, 'Loaded content has appropriate length');
+	is(length($$contref), 617, 'Loaded content has appropriate length');
 
 	my ($tmpfh, $tmpfile) = File::Temp::tempfile("BeaconAggregator-XXXXXXXX", SUFFIX => ".txt", TMPDIR => 1);
 	ok($tmpfh, "got TEMP file handle");
@@ -74,7 +74,7 @@ subtest 'load uri' => sub {
 	ok($seqno && ($seqno > 0), "something was loaded");
 	is($seqno, 2, "expected seqno");
 	ok($rec_ok  && ($rec_ok > 0), "records loaded");
-	is($rec_ok, 4, "number of unique records loaded");
+	is($rec_ok, 5, "number of unique records loaded");
 };
 
 # update known files
@@ -85,7 +85,7 @@ subtest 'update' => sub {
 
 	($seqno, $rec_ok) = $use->update("bar", {}, (force => 1));
 	is($seqno, 3, "seqno was incremented");
-	is($rec_ok, 4, "number of unique records loaded");
+	is($rec_ok, 5, "number of unique records loaded");
 };
 
 
@@ -99,7 +99,7 @@ subtest 'gzipped' => sub {
 	ok($seqno && ($seqno > 0), "something gzipped was loaded");
 	is($seqno, 4, "expected seqno");
 	ok($rec_ok  && ($rec_ok > 0), "gzipped records loaded");
-	is($rec_ok, 4, "number of unique records loaded");
+	is($rec_ok, 5, "number of unique records loaded");
 };
 
 # purge
@@ -108,7 +108,7 @@ subtest 'purge' => sub {
 	my $rec_del = $use->purge("baz");
 	ok(defined $rec_del, "purged beacon file");
 	ok($rec_del && ($rec_del > 0), "something was purged");
-	is($rec_del, 4, "expected number of deleted records");
+	is($rec_del, 5, "expected number of deleted records");
 };
 
 # Seqnos
@@ -195,8 +195,8 @@ subtest 'headers' => sub {
 		_alias => 'bar',
 		_uri => $file_uri, _ruri => $file_uri,
 		_mtime => 'xxxx-xx-xxTxx:xx:xxZ', _ftime => 'xxxx-xx-xxTxx:xx:xxZ', _utime => 'xxxx-xx-xxTxx:xx:xxZ',
-		_counti => 4, _countu => 3,
-		_fstat => '4 replaced, 0 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored',
+		_counti => 5, _countu => 3,
+		_fstat => '5 replaced, 0 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored',
 		_ustat => 'successfully loaded',
 	      }],
 	4 => [{ VERSION => 0.1,
@@ -211,7 +211,7 @@ subtest 'headers' => sub {
 		_uri => $gzfile_uri, _ruri => $gzfile_uri,
 		_mtime => 'xxxx-xx-xxTxx:xx:xxZ', _ftime => 'xxxx-xx-xxTxx:xx:xxZ', _utime => 'xxxx-xx-xxTxx:xx:xxZ',
 		_counti => 0, _countu => 0,
-		_fstat => '0 replaced, 4 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored',
+		_fstat => '0 replaced, 5 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored',
 		_ustat => 'purged',
 	      }],
 	);
@@ -238,7 +238,7 @@ subtest 'listCollections' => sub {
 	plan tests => 10;
 	my %expected = (  # Seqno, Alias, Uri, Mtime, Counti, Countu
 	1 => [1, "foo", undef, "...", 3, 3],
-	3 => [3, "bar", $file_uri, "...", 4, 3],
+	3 => [3, "bar", $file_uri, "...", 5, 3],
 	4 => [4, "baz", $gzfile_uri, "...", 0, 0],
 	);
 	while ( my @row = $use->listCollections() ) {
@@ -259,7 +259,7 @@ subtest 'admin' => sub {
 	plan tests => 5;
 	my $expected = { # key, value
 	    DATA_VERSION => 2,
-            gcounti => 7,
+            gcounti => 8,
             gcountu => 5,
 #	    IDENTIFIER_TYPE => "",
 	  };
@@ -282,7 +282,7 @@ subtest 'update+unload' => sub {
 	plan tests => 5;
 	($seqno, $rec_ok) = $use->update("baz", {}, (force => 1));
 	is($seqno, 5, "seqno was incremented");
-	is($rec_ok, 4, "number of unique records loaded");
+	is($rec_ok, 5, "number of unique records loaded");
 	my ($rows, @oldvals) = $use->headerfield("baz", 'INSTITUTION', 'I Cared');
 
 	my $seq_del = $use->unload("bar");

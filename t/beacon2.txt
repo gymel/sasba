@@ -7,6 +7,7 @@
 118784226|de.wikisource.org|http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226 
 118784226|72|commons.wikimedia.org|http://commons.wikimedia.org/wiki/Category%3AOctave_Mirbeau
 103117741=45433|Châtelain, Jean-Jacques
+103117741=Tâtâ|Test encoding only
 103117741=45432|Châtelain, Jacques-Jean
 118559796
 118784226|de.wikipedia.org|http://toolserver.org/~apper/pd/person/pnd-redirect/de/118784226

@@ -21,7 +21,7 @@ subtest 'idStat' => sub {
 	plan tests => 6;
 	my $itot = $use->idStat();
 	ok($itot, 'nonzero idStat');
-	is($itot, 7, 'idStat returned unexpected count');
+	is($itot, 8, 'idStat returned unexpected count');
 # idStat distinct
 	$itot = $use->idStat(0, (distinct => 1));
 	ok($itot, 'nonzero distinct idStat');
@@ -49,7 +49,7 @@ subtest 'idCounts' => sub {
 	  '118784226' => [2, 0],
 	  '132464462' => [1, 1],
 	  '118624458' => [1, 2],
-	  '103117741' => [2, 0],
+	  '103117741' => [3, 0],
 	  '118559796' => [1, 0],
 	);
 	while ( my (@clist) = $use->idCounts() ) {
@@ -85,7 +85,7 @@ subtest 'idCounts distinct' => sub {
 
 # idList
 subtest 'idList' => sub {
-	plan tests => 32;
+	plan tests => 35;
 	my %iexpected = (
 	  '118784226' => {"1:" => ["", "", "", ""], 
         	          "5:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
@@ -93,7 +93,8 @@ subtest 'idList' => sub {
 	  '132464462' => {"1:" => [1, "", "", ""]},
 	  '118624458' => {"1:" => [2, "", "", ""]},
 	  '103117741' => {"5:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
-        	          "5:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"]
+	                  "5:Tâtâ" => ["", "Test encoding only", "", "Tâtâ"],
+        	          "5:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"],
 	                 },
 	  '118559796' => {"5:" =>, ["", "", "", ""]},
 	);

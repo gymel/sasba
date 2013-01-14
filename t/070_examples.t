@@ -19,14 +19,14 @@ isa_ok ($use, 'SeeAlso::Source::BeaconAggregator');
 # findExample
 subtest 'findExample' => sub {
 	plan tests => 9;
-	my $resultref = $use->findExample(3);
+	my $resultref = $use->findExample(4);
 	is($resultref, undef, 'empty result on impossible request');
 
         my $sth = "";
 	$resultref = $use->findExample(2, 0, $sth);
 	isa_ok($resultref, 'HASH', 'fulfilled request');
 	ok($sth, 'statement handle to pass back');
-        my $expected = { id => '103117741', response => '2/0' };
+        my $expected = { id => '103117741', response => '3/0' };
 	is_deeply($resultref, $expected, 'expected identifier and counts');
 
 	$resultref = $use->findExample(2, 1, $sth);

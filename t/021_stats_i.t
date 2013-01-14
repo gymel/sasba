@@ -2,7 +2,7 @@
 
 # t/021_stats_i.t - check dumps and maintenance 
 
-use Test::More tests => 119;
+use Test::More tests => 126;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator::Maintenance' );
@@ -25,7 +25,7 @@ subtest 'idStat' => sub {
 	plan tests => 6;
 	my $itot = $use->idStat();
 	ok($itot, 'nonzero idStat');
-	is($itot, 7, 'idStat returned unexpected count');
+	is($itot, 8, 'idStat returned unexpected count');
 # idStat distinct
 	$itot = $use->idStat(0, (distinct => 1));
 	ok($itot, 'nonzero distinct idStat');
@@ -52,7 +52,7 @@ my %cexpected = (
   '118784226' => [2, 0],
   '132464462' => [1, 1],
   '118624458' => [1, 2],
-  '103117741' => [2, 0],
+  '103117741' => [3, 0],
   '118559796' => [1, 0],
 );
 while ( my (@clist) = $use->idCounts() ) {
@@ -93,7 +93,8 @@ my %iexpected = (
   '132464462' => {"1:" => [1, "", "", ""]},
   '118624458' => {"1:" => [2, "", "", ""]},
   '103117741' => {"5:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
-                  "5:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"]
+                  "5:Tâtâ" => ["", "Test encoding only", "", "Tâtâ"],
+                  "5:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"],
                  },
   '118559796' => {"5:" =>, ["", "", "", ""]},
 );
