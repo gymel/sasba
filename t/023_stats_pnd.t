@@ -13,7 +13,7 @@ BEGIN {
 
 SKIP: {
   eval { require SeeAlso::Identifier::PND };
-  skip "SeeAlso::Identifier::PND is not installed", 123 if $@;
+  skip "SeeAlso::Identifier::PND is not installed", 130 if $@;
 
 my $dsn = "testdb";
 my $idclass = SeeAlso::Identifier::PND->new();
