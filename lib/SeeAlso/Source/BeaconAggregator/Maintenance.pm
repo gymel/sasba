@@ -448,8 +448,8 @@ sub loadFile {
       $options{'verbose'} && ref($package) && print "Assuming identifiers of type ".ref($package)."\n";
     };
 
-  my $mtime = (stat(_))[9];
   open(BKN, "<:utf8", $file) or (print "ERROR: cannot read $file\n", return undef);
+  my $mtime = (stat(_))[9];
   local($.) = 0;
 
   $fields = {} unless $fields;
