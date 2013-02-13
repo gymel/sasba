@@ -34,13 +34,13 @@ my ($dsn, $cache_size, @pragmas, @presets);
 my ($distinct, $force, $keeposd, $quiet, $dbfile, $itype, $redirs);
 
 #  Application constants
-our $EXAMPLEGOAL = 50;              # don't try to find examples with higher hit count
+our $EXAMPLEGOAL = 50;              # don't attempt to find examples with higher hit count
 
-our $RETRYWAIT = 250*60;            # w/o #REVISIT hint: never attempt more often (4h 10')
-our $NOREVISITWAIT = 1400*60;       # w/o #REVISIT hint: never revisit sooner (23h20')
+our $RETRYWAIT = 213*60;            # w/o #REVISIT hint: never attempt more often (3h33')
+our $NOREVISITWAIT = 1344*60;       # w/o #REVISIT hint: never revisit sooner (22h22')
 
-our $REVISITFORCE = 90*24*3600;     # with #REVISIT hint: force revisit after (90d)
-our $NOREVISITFORCE = 15*24*3600;   # w/o #REVISIT hint: force revisit after (15d)
+our $REVISITFORCE = 4*30*24*3600;   # with #REVISIT hint: force revisit after (4m)
+our $NOREVISITFORCE = 4*7*24*3600;  # w/o #REVISIT hint: force revisit after (4w)
 
 =head1 NAME
 
