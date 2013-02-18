@@ -11,7 +11,7 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.2_78';
+our $VERSION = '0.2_79';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;
@@ -101,7 +101,7 @@ Options:
   --preset HEADER=value  [for "beacon", repeatable]
 
   --pragma [SQLite pragma]  (repeatable)
-  --cache_size  [SQLite pragma]
+  --cache_size  [SQLite pragma value]
 =cut
 
 =head1 OPTIONS
@@ -892,11 +892,6 @@ sub refreshOSD {    #
     my $anyref = $db->RepoCols();
     my $repcnt = scalar keys %$anyref;
     print "Refreshing OSD data from $repcnt sources: ";
-
-    if ( $force && $doexamples ) {
-        print "ANALYZE... " if $verbose;
-        $db->{dbh}->do("ANALYZE;");
-      };
 
     print "DateModified... " if $verbose;
     $db->setOSD("DateModified", time());
