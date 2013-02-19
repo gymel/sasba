@@ -436,21 +436,25 @@ sub loadFile {
   my ($self, $file, $fields, %options) = @_;
   $options{'verbose'} = $self->{'verbose'} unless exists $options{'verbose'};
   $options{'verbose'} ||= 0;
+
   if ( ! $file ) {
       croak("Missing file argument")}
-  elsif ( ! -r $file ) {
-      print "ERROR: no such file $file\n";
-      return undef;
+  elsif ( ! -e $file ) {
+      print "ERROR: no such file $file\n" && return undef}
+  elsif ( ! -r _ ) {
+      print "ERROR: no read permissions for $file\n" && return undef}
+  elsif ( -z _ ) {
+      print "WARNING: empty file $file\n";
+      return (0,0, "empty file: Will not process");
     }
+  my $mtime = (stat(_))[9];
+  open(BKN, "<:utf8", $file) or (print "ERROR: cannot read $file\n", return undef);
+  local($.) = 0;
 
   unless ( defined $self->{identifierClass} ) {
       my $package = $self->autoIdentifier();
       $options{'verbose'} && ref($package) && print "Assuming identifiers of type ".ref($package)."\n";
     };
-
-  open(BKN, "<:utf8", $file) or (print "ERROR: cannot read $file\n", return undef);
-  my $mtime = (stat(_))[9];
-  local($.) = 0;
 
   $fields = {} unless $fields;
   $fields->{'_ftime'} ||= time();
