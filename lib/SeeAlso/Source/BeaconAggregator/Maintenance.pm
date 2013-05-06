@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_79';
+    $VERSION     = '0.2_81';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -398,7 +398,7 @@ Returns a triple:
 $seqno is undef on error
 
 $seqno and $rec_ok are zero with $message containing an explanation in case
-of no action taken
+of no action taken.
 
 $seqno is an positive integer if something was loaded: The L<Sequence Number>
 (internal unique identifier) for the representation of the beacon file in
@@ -417,6 +417,8 @@ Hashref with additional meta and admin fields to store
 =item Supported options: 
 
  verbose => (0|1)
+ force => (0|1)   process unconditionally without timestamp comparison
+ nostat => (0|1)  don't refresh global identifier counters
 
 =back
 
@@ -504,6 +506,8 @@ sub loadFile {
                   print "WARNING: Ignoring unknown $field [$data] [$showme l.$.]\n";
                 };
             }
+          elsif ( /^(#[^:\s]+)/ ) {
+              print "WARNING: Discarding unparseable line >$1...< in beacon header context [$showme l.$.]\n"}
           elsif ( /^\s*$/ ) {
               print "NOTICE: Discarding blank line in beacon header context [$showme l.$.]\n" if $options{'verbose'}}
           elsif ( ! $headerseen ) {
@@ -569,7 +573,7 @@ sub loadFile {
                }
            };
 
-         if ( $format !~ /\baltTARGET\b/ ) {            # Allow certain duplicates (force disambiguization)
+         if ( $format !~ /\baltTARGET\b/ ) {            # Allow certain duplicates (force disambiguisation)
              $altid ||= $info || $link}
 
          $hits = "" unless defined $hits;
@@ -724,8 +728,14 @@ XxX
           print "]\n" if $options{'verbose'};
         };
 
-      $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
-      $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
+      if ( $options{'nostat'} ) {   # invalidate since they might have changed
+          $self->admin('gcounti', undef);
+          $self->admin('gcountu', undef);
+        }
+      else {
+          $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
+          $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
+        }
     };
 
   return ($collno, $recok, undef);
@@ -734,7 +744,7 @@ XxX
 
 =head4 processbeaconheader($self, $fieldref, [ %options] )
 
-Internal subroutine used by loadFile.
+Internal subroutine used by C<loadFile()>.
 
 =over 8
 
@@ -987,8 +997,11 @@ Hashref, containing
 
 =item %options
 
+Hash, propagated to C<loadFile()>
+
  verbose => (0|1)
- force => (0|1)
+ force => (0|1)   process unconditionally without timestamp comparison
+ nostat => (0|1)  don't refresh global identifier counters
 
 =back
 
@@ -998,7 +1011,7 @@ option is provided).
 
 If the feed appears to be newer than the previously loaded version it is fetched, 
 some UTF-8 adjustments are performed if necessary, then it is stored to a temporary file
-and from there finally processed by the loadFile method above.
+and from there finally processed by the C<loadFile()> method above.
 
 The URI to load is determined by the following order of precedence:
 
@@ -1276,8 +1289,14 @@ XxX
           print "]\n" if $options{'verbose'};
         };
 
-      $self->admin('gcounti', $self->idStat(0, distinct => 0) || 0);
-      $self->admin('gcountu', $self->idStat(0, distinct => 1) || 0);
+      if ( $options{'nostat'} ) {   # invalidate since they might have changed
+          $self->admin('gcounti', undef);
+          $self->admin('gcountu', undef);
+        }
+      else {
+          $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
+          $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
+        }
     };
 
   return $rows;
@@ -1353,8 +1372,14 @@ XxX
           print "]\n" if $options{'verbose'};
         };
 
-      $self->admin('gcounti', $self->idStat(0, distinct => 0) || 0);
-      $self->admin('gcountu', $self->idStat(0, distinct => 1) || 0);
+      if ( $options{'nostat'} ) {   # invalidate since they might have changed
+          $self->admin('gcounti', undef);
+          $self->admin('gcountu', undef);
+        }
+      else {
+          $self->admin('gcounti', $self->idStat(undef, 'distinct' => 0) || 0);
+          $self->admin('gcountu', $self->idStat(undef, 'distinct' => 1) || 0);
+        }
     };
 
   return $trows;

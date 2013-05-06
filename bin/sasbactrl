@@ -11,7 +11,7 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.2_79';
+our $VERSION = '0.2_81';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;
@@ -34,7 +34,7 @@ my ($dsn, $cache_size, @pragmas, @presets);
 my ($distinct, $force, $keeposd, $quiet, $dbfile, $itype, $redirs);
 
 #  Application constants
-our $EXAMPLEGOAL = 50;              # don't attempt to find examples with higher hit count
+our $EXAMPLEGOAL = 100;             # don't attempt to find examples with higher hit count
 
 our $RETRYWAIT = 213*60;            # w/o #REVISIT hint: never attempt more often (3h33')
 our $NOREVISITWAIT = 1344*60;       # w/o #REVISIT hint: never revisit sooner (22h22')
@@ -271,7 +271,7 @@ if ( $action eq "init" ) {
 
 =item C<list>
 
-Interface to the C<listCollections> method.
+Interface to the C<listCollections()> method.
 
 List all loaded beacon files with identifier counts.
 
@@ -389,7 +389,7 @@ elsif ( $action eq "status" ) {
 
 =item C<headers>
 
-Interface to the C<headers> method.
+Interface to the C<headers()> method.
 
 Prints all OSD fields and then all beacon fields.
 
@@ -423,7 +423,7 @@ elsif ( $action eq "headers" ) {
 
 =item C<header>
 
-Interface to the C<headerfield> method.
+Interface to the C<headerfield()> method.
 
 The first parameter is a mandatory and specifies a sequence number,
 alias or pattern (e.g. "C<%>") to operate on.
@@ -467,7 +467,7 @@ elsif ( $action eq "header" ) {
 
   load I<alias>, I<uri>, I<datafile>
 
-Interface to the C<loadFile> or C<update> method
+Interface to the C<loadFile()> or C<update()> methods
 
 Load beacon data from Uri (if I<uri> is given) or physical file
 from disk (I<datafile> must be given). 
@@ -495,7 +495,7 @@ elsif ( $action eq "load" ) {
 
 =item C<update>
 
-Interface to the C<update> method
+Interface to the C<update()> method
 
 (Re)load beacon files with known URIs according
 to the following policy: Respect the #REVISIT hint, assume a #REVISIT
@@ -593,10 +593,10 @@ elsif ( $action eq "update" ) {
               }
             elsif ( $force ) {
                 print @states};
-            my ($cn, $cc) = $db->update($aliasref->{$_}, {}, %passopts, ($forcereload ? ( 'force' => 1) : ()));
+            my ($cn, $cc) = $db->update($aliasref->{$_}, {}, %passopts, ($forcereload ? ( 'force' => 1) : ()), 'nostat' => 1);
             if ( $cn ) {
                 printf "%2u: %s successfully updated (new SeqNo %u, %u records)\n", ++$did, $aliasref->{$_}, $cn, $cc;
-                refreshOSD(0) unless $keeposd;
+#               refreshOSD(0) unless $keeposd;     # will be done anyway since $did true now
               };
             print " ***\n";
           };
@@ -606,7 +606,7 @@ elsif ( $action eq "update" ) {
 
 =item C<purge>
 
-Interface to the <purge> method.
+Interface to the <purge()> method.
 
 Clears all beacon data for the seqnos or aliases given by
 the first argument: The beacon source with its metadata
@@ -621,7 +621,7 @@ is given.
 
 =item C<unload>
 
-Interface to the <unload> method.
+Interface to the <unload()> method.
 
 Clears all beacon data B<and> removes the listed headers
 for the seqnos or aliases given by the first argument:
@@ -648,7 +648,7 @@ elsif ( ($action eq "unload") or ($action eq "purge") ) {
 
 =item C<idstat>
 
-Interface to the C<idStat> method. 
+Interface to the C<idStat()> method. 
 
 Counts indentifiers, optionally only from those beacon files with seqno or alias restricted by the first argument.
 
@@ -661,7 +661,7 @@ elsif ( $action eq "idstat" ) {
 
 =item C<idcounts>
 
-Interface to the C<idCounts> method. 
+Interface to the C<idCounts()> method. 
 
 Counts identifiers, optionally only these identifiers which
 match the pattern given by the first argument.
@@ -678,7 +678,7 @@ elsif ( $action eq "idcounts" ) {
 
 =item C<idlist>
 
-Interface to the C<idList> method. 
+Interface to the C<idList()> method. 
 
 For each identifier list a complicated list of entries found.
 Optionally only these identifiers which match the pattern given 
@@ -710,7 +710,7 @@ Lists all header fields from the database.
 
 =item C<beacon>
 
-Interface to the C<beacon> method.
+Interface to the C<beacon()> method.
 
 Produces a beacon file (header fields plus beacon entries)
 for the database.
@@ -841,7 +841,7 @@ elsif ( $action eq "admin" ) {
 
 =item C<deflate>
 
-Interface to the C<deflate> method (DEFLATE+REINDEX+ANALYZE the
+Interface to the C<deflate()> method (DEFLATE+REINDEX+ANALYZE the
 SQLite database);
 
 =cut
@@ -896,7 +896,16 @@ sub refreshOSD {    #
     print "DateModified... " if $verbose;
     $db->setOSD("DateModified", time());
 
-    my $gcountu = $db->admin('gcountu') || $db->idStat(undef, distinct => 1) || 0;
+    my $gcounti = $db->admin('gcounti');
+    unless ( $gcounti ) {
+        $gcounti = $db->idStat(undef, distinct => 0) || 0;
+        $gcounti && $db->admin('gcounti', $gcounti) unless $keeposd;
+      };
+    my $gcountu = $db->admin('gcountu');
+    unless ( $gcountu ) {
+        $gcountu = $db->idStat(undef, distinct => 1) || 0;
+        $gcountu && $db->admin('gcountu', $gcountu) unless $keeposd;
+      };
 
     print "collect Descriptions... " if $verbose;
     my %descr;
