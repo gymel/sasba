@@ -722,11 +722,11 @@ XxX
   close(BKN);
 
   if ( $numchg or $options{'force'} ) {
-      if ( $options{'force'} ) {
-          print "[ANALYZE ..." if $options{'verbose'};
-          $self->{dbh}->do("ANALYZE;");
-          print "]\n" if $options{'verbose'};
-        };
+#      if ( $options{'force'} ) {
+#          print "[ANALYZE ..." if $options{'verbose'};
+#          $self->{dbh}->do("ANALYZE;");
+#          print "]\n" if $options{'verbose'};
+#        };
 
       if ( $options{'nostat'} ) {   # invalidate since they might have changed
           $self->admin('gcounti', undef);
@@ -1283,11 +1283,11 @@ XxX
   $rows = 0 if $rows eq "0E0";
 
   if ( $rows or $options{'force'} ) {
-      if ( $options{'force'} ) {
-          print "[ANALYZE ..." if $options{'verbose'};
-          $self->{dbh}->do("ANALYZE;");
-          print "]\n" if $options{'verbose'};
-        };
+#      if ( $options{'force'} ) {
+#          print "[ANALYZE ..." if $options{'verbose'};
+#          $self->{dbh}->do("ANALYZE;");
+#          print "]\n" if $options{'verbose'};
+#        };
 
       if ( $options{'nostat'} ) {   # invalidate since they might have changed
           $self->admin('gcounti', undef);
@@ -1366,11 +1366,11 @@ XxX
     };
 
   if ( $trows or $options{'force'} ) {
-      if ( $options{'force'} ) {
-          print "[ANALYZE ..." if $options{'verbose'};
-          $self->{dbh}->do("ANALYZE;");
-          print "]\n" if $options{'verbose'};
-        };
+#      if ( $options{'force'} ) {
+#          print "[ANALYZE ..." if $options{'verbose'};
+#          $self->{dbh}->do("ANALYZE;");
+#          print "]\n" if $options{'verbose'};
+#        };
 
       if ( $options{'nostat'} ) {   # invalidate since they might have changed
           $self->admin('gcounti', undef);
