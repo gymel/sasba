@@ -11,7 +11,7 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.2_81';
+our $VERSION = '0.2_82';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;
@@ -56,13 +56,13 @@ Actions and Arguments:
        [--itype type] Set up Database for dsn (dbroot must exist)
 
   load alias [uri [file]]
-  update [seqno_or_alias [uri]]
+  update  [pattern | seqno_or_alias [uri]]
 
   status  [seqno/alias/pattern]     parts of "list" and "headers"
 
   unload  seqno/alias/pattern
   purge   seqno/alias/pattern
-  list    seqno/alias/pattern
+  list    [seqno/alias/pattern]
 
   headers [seqno/alias/pattern]
   header  seqno/alias/pattern [field=val ...]
@@ -517,15 +517,28 @@ elsif ( $action eq "update" ) {
     my $seqno_or_alias = shift @ARGV;
     my $did;
     if ( $seqno_or_alias ) {
-        die "no wildcards allowed in seqno_or_alias: $seqno_or_alias" if $seqno_or_alias =~ /%/;
         my $uri = shift @ARGV || "";
-        my $cc;
-        print "\n==> $seqno_or_alias ($uri) <==\n" if $verbose;
         if ( $uri ) {
-            ($did, $cc) = $db->update($seqno_or_alias, {_uri => $uri}, %passopts)}
+            die "no wildcards allowed in seqno_or_alias when uri is provided: $seqno_or_alias" if $seqno_or_alias =~ /%/;
+            print "\n==> $seqno_or_alias ($uri) <==\n" if $verbose;
+            my ($cn, $cc) = $db->update($seqno_or_alias, {_uri => $uri}, %passopts);
+            if ( $cn ) {
+                print "Collection Number $did ($cc records)\n" if $cn;
+                $did ++;
+              }
+          }
         else {
-            ($did, $cc) = $db->update($seqno_or_alias, {}, %passopts)};
-        print "Collection Number $did ($cc records)\n" if $did;
+            my $aliasref = $db->RepoCols("_alias", $seqno_or_alias);
+            foreach ( sort {$a <=> $b} keys %$aliasref ) {
+                my $item = $aliasref->{$_};
+                print "\n==> $item (auto) <==\n" if $verbose;
+                my ($cn, $cc) = $db->update($item, {}, %passopts);
+                if ( $cn ) {
+                    print "Collection Number $did ($cc records)\n" if $cn;
+                    $did ++;
+                  }
+              };
+          };
       }
     else {
         my $aliasref = $db->RepoCols("_alias");
