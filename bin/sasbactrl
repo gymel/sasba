@@ -11,7 +11,7 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.2_82';
+our $VERSION = '0.2_83';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;
@@ -523,8 +523,8 @@ elsif ( $action eq "update" ) {
             print "\n==> $seqno_or_alias ($uri) <==\n" if $verbose;
             my ($cn, $cc) = $db->update($seqno_or_alias, {_uri => $uri}, %passopts);
             if ( $cn ) {
-                print "Collection Number $did ($cc records)\n" if $cn;
                 $did ++;
+                print "Collection Number $cn ($cc records)\n" if $cn;
               }
           }
         else {
@@ -534,9 +534,7 @@ elsif ( $action eq "update" ) {
                 print "\n==> $item (auto) <==\n" if $verbose;
                 my ($cn, $cc) = $db->update($item, {}, %passopts);
                 if ( $cn ) {
-                    print "Collection Number $did ($cc records)\n" if $cn;
-                    $did ++;
-                  }
+                    printf "%2u: %s successfully updated (new SeqNo %u, %u records)\n", ++$did, $aliasref->{$_}, $cn, $cc}
               };
           };
       }
@@ -614,7 +612,8 @@ elsif ( $action eq "update" ) {
             print " ***\n";
           };
       };
-    refreshOSD(1) if $did or $force;
+    if ( $did or $force ) {
+        refreshOSD( $force ? 1 : 0)};
   }
 
 =item C<purge>
