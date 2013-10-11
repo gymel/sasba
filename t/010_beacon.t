@@ -172,6 +172,8 @@ subtest 'headers' => sub {
 	my %expected = (
 	1 => [{ VERSION => 0.1,
 		FORMAT => 'PND-BEACON',
+		UPDATE => q(Don't ever do that!),
+		REMARK => q!Dang " ling!,
 		ONEMESSAGE => 'Hit in test repo',
 		TARGET => 'http://d-nb.info/gnd/{ID}',
 	      },

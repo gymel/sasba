@@ -1,6 +1,8 @@
 #FORMAT: PND-BEACON
 #TARGET: http://d-nb.info/gnd/{ID}
 #ONEMESSAGE: Hit in test repo
+#REMARK: Dang " ling
+#UPDATE: Don't ever do that!
 118784226 
 132464462|1
 118624458 | 2
