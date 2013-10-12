@@ -13,7 +13,7 @@ my $dsn = "testdb";
 my $line;
 my $cmd = "blib/script/sasbactrl";
 
-use Test::More tests => 16;
+use Test::More tests => 21;
 SKIP: {
     eval {
 	require Test::Command::Simple;
@@ -43,7 +43,7 @@ subtest "version" => sub {
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "version");
     is(rc >> 8, 0, "ask for 'version': ".stderr);
     is(stderr, "", "warnings on 'version': ".stderr);
-    like(stdout, qr/\b0\.2_/, "version in result: ".stdout);
+    like(stdout, qr/\b0\.2_/, "version in result: ");
 };
 
 # Test schema_version
@@ -119,7 +119,7 @@ subtest "admin" => sub {
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "admin");
     is(rc >> 8, 0, "ask for 'admin': ".stderr);
     is(stderr, "", "warnings on 'admin': ".stderr);
-    like(stdout, qr/DATA_VERSION\s*:\s*2/, "correct DATA_VERSION in result: ".stdout);
+    like(stdout, qr/DATA_VERSION\s*:\s*2/, "correct DATA_VERSION in result: ");
 };
 
 # beacon
@@ -129,10 +129,80 @@ subtest "beacon w/o REVISIT" => sub {
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "beacon", "cgibase", "--preset", "FEED=http://localhost:1234/testbeacon.txt");
     is(rc >> 8, 0, "ask for 'beacon': ".stderr);
     is(stderr, "", "warnings on 'beacon': ".stderr);
-    like(stdout, qr!VERSION\s*:\s*0\.1!, "correct VERSION in result: ".stdout);
-    like(stdout, qr!FEED\s*:\s*http://localhost:1234/testbeacon.txt!, "correct FEED in result: ".stdout);
+    like(stdout, qr!VERSION\s*:\s*0\.1!, "correct VERSION in result: ");
+    like(stdout, qr!FEED\s*:\s*http://localhost:1234/testbeacon.txt!, "correct FEED in result: ");
   };
 
-};
+# update
+subtest "update" => sub {
+    plan tests => 7;
 
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "load", "bar", "http://www.example.com/beacon2.txt", "t/beacon2.txt");
+    is(rc >> 8, 0, "ask for 'load': ".stderr);
+    is(stderr, "", "warnings on 'load': ".stderr);
+    like(stdout, qr!NOTICE: New sequence \d for bar: processed 7 Records from 13 lines!, "correct sequence in result: ");
+    like(stdout, qr!\(0 replaced, 5 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored\)!, "correct stats in result: ");
+  };
+
+# idstat
+subtest "idstat" => sub {
+    plan tests => 12;
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idstat", 'ba%');
+    is(rc >> 8, 0, "ask for 'idstat ba%': ".stderr);
+    is(stderr, "", "warnings on 'idstat ba%': ".stderr);
+    is(stdout, "5 identifiers\n", "correct # of identifiers in idstat: ");
+
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idstat", "--distinct");
+    is(rc >> 8, 0, "ask for 'idstat --distinct': ".stderr);
+    is(stderr, "", "warnings on 'idstat --distinct': ".stderr);
+    is(stdout, "5 identifiers\n", "correct # of identifiers in idstat --distinct: ");
+  };
+
+# idcounts
+subtest "idcounts" => sub {
+    plan tests => 13;
+
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idcounts", "118%");
+    is(rc >> 8, 0, "ask for 'idcounts 118%': ".stderr);
+    is(stderr, "", "warnings on 'idcounts 118%': ".stderr);
+    like(stdout, qr!118784226 2 0!, "missing '118784226 2 0'");
+    unlike(stdout, qr!\b132464462\b!, "unwanted '132464462'");
+
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idcounts", "--distinct");
+    is(rc >> 8, 0, "ask for 'idcounts --distinct': ".stderr);
+    is(stderr, "", "warnings on 'idcounts --distinct': ".stderr);
+    like(stdout, qr!132464462 1 1!, "missing '132464462 1 1'");
+  };
+
+# idlist
+subtest "idlist" => sub {
+    plan tests => 14;
+
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idlist");
+    is(rc >> 8, 0, "ask for 'idlist': ".stderr);
+    is(stderr, "", "warnings on 'idlist': ".stderr);
+    like(stdout, qr!118784226\b.*\t7,,de.wikisource.org,http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226!, "missing '118784226 ... 7,,de.wikisource.org,...'");
+    like(stdout, qr!118624458\t!, "missing '118624458'");
+
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idlist", "103%");
+    is(rc >> 8, 0, "ask for 'idlist': ".stderr);
+    is(stderr, "", "warnings on 'idlist': ".stderr);
+    like(stdout, qr!103117741\b.*\t7,,!, "missing '103117741'");
+    unlike(stdout, qr!\b118784226\b!, "unwanted '118784226'");
+  };
+
+# incidence
+subtest "incidence" => sub {
+    plan tests => 10;
+
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "incidence", "1%");
+    is(rc >> 8, 0, "ask for 'incidence 1%': ".stderr);
+    is(stderr, "", "warnings on 'incidence 1%': ".stderr);
+    like(stdout, qr!118559796\tbar!, "missing '118559796 bar'");
+    like(stdout, qr!118624458\tfoo!, "missing '118624458 foo'");
+    like(stdout, qr!118784226\tbar\|foo!, "missing '118784226 bar|foo'");
+    like(stdout, qr!103117741\tbar\s!, "missing '103117741 bar'");
+    unlike(stdout, qr![\s\|]([^\s\|]+)(?=\|)\S*\|\1!, "duplicate listing in result");
+};
+}
 

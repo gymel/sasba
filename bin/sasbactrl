@@ -78,6 +78,7 @@ Actions and Arguments:
   idststat [seqno/alias/pattern]
   idcounts [identifier/pattern]
   idlist [identifier/pattern]
+  incidence [identifier/pattern]
 
   admin [field[=value]]      list/get/set admin properties:
      DATA_VERSION
@@ -692,7 +693,7 @@ elsif ( $action eq "idcounts" ) {
 
 Interface to the C<idList()> method. 
 
-For each identifier list a complicated list of entries found.
+For each identifier output a complicated list of the corresponding entries.
 Optionally only these identifiers which match the pattern given 
 by the first argument are shown.
 
@@ -710,6 +711,30 @@ elsif ( $action eq "idlist" ) {
             print "\t@pretty";
           }
         print "\n";
+      };
+  }
+
+=item C<incidence>
+
+Interpretation of the C<idList()> method. 
+
+For each identifier output a sorted list of aliases (or seqnos).
+
+=cut
+
+elsif ( $action eq "incidence" ) {
+    binmode (STDOUT, ":utf8");
+    my $aliasref = $db->RepoCols("_alias");
+    while (my (@list) = $db->idList(@ARGV)) {
+        my $id = shift @list;
+        my %sources;
+        foreach my $rowref ( @list ) {
+            my $seqno = $rowref->[0];
+            $sources{$aliasref->{$seqno} || "<$seqno>"} ++;
+          };
+        my @sorted = sort keys %sources;
+        local($") = "|";
+        print "$id\t@sorted\n";
       };
   }
 
@@ -920,6 +945,7 @@ sub refreshOSD {    #
       };
 
     print "collect Descriptions... " if $verbose;
+    my $exclprefix = " [excluding";
     my %descr;
     my $countref = $db->RepoCols("_countu");
     my $aliasref = $db->RepoCols("_alias");
@@ -946,10 +972,12 @@ sub refreshOSD {    #
         if ( $countref->{$_} ) {
             $descr{$_} .= " [".$countref->{$_}."]"}
         else {
-            print " [excluding ".($aliasref->{$_} || $_)."] " if $verbose;
+            print $exclprefix . ($aliasref->{$_} || $_) if $verbose;
+            $exclprefix = ", ";
             delete $descr{$_};
           };
       };
+    print "] " if $verbose && $exclprefix eq ", ";
     my $rcount = scalar keys %descr;
     print "set Descriptions... " if $verbose;
     $db->setOSD("Description", "Currently serving $gcountu distinct identifiers from $rcount beacon sources:\n -- "
