@@ -530,7 +530,7 @@ elsif ( $action eq "update" ) {
           }
         else {
             my $aliasref = $db->RepoCols("_alias", $seqno_or_alias);
-            foreach ( sort {$a <=> $b} keys %$aliasref ) {
+            foreach ( map {$_->[0]} sort {$a->[1] cmp $b->[1] || $a->[0] <=> $b->[0]} map{[$_, $aliasref->{$_} || ""]} keys %$aliasref ) {
                 my $item = $aliasref->{$_};
                 print "\n==> $item (auto) <==\n" if $verbose;
                 my ($cn, $cc) = $db->update($item, {}, %passopts);
@@ -945,7 +945,7 @@ sub refreshOSD {    #
       };
 
     print "collect Descriptions... " if $verbose;
-    my $exclprefix = " [excluding";
+    my $exclprefix = " [excluding: ";
     my %descr;
     my $countref = $db->RepoCols("_countu");
     my $aliasref = $db->RepoCols("_alias");
@@ -977,7 +977,7 @@ sub refreshOSD {    #
             delete $descr{$_};
           };
       };
-    print "] " if $verbose && $exclprefix eq ", ";
+    print "] ... " if $verbose && $exclprefix eq ", ";
     my $rcount = scalar keys %descr;
     print "set Descriptions... " if $verbose;
     $db->setOSD("Description", "Currently serving $gcountu distinct identifiers from $rcount beacon sources:\n -- "
