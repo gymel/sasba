@@ -733,8 +733,8 @@ elsif ( $action eq "incidence" ) {
             $sources{$aliasref->{$seqno} || "<$seqno>"} ++;
           };
         my @sorted = sort keys %sources;
-        local($") = "|";
-        print "$id\t@sorted\n";
+        local($") = " ";
+        print "$id\|".(scalar @sorted)."\|@sorted\n";
       };
   }
 
