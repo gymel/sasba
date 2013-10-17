@@ -198,10 +198,10 @@ subtest "incidence" => sub {
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "incidence", "1%");
     is(rc >> 8, 0, "ask for 'incidence 1%': ".stderr);
     is(stderr, "", "warnings on 'incidence 1%': ".stderr);
-    like(stdout, qr!118559796\tbar!, "missing '118559796 bar'");
-    like(stdout, qr!118624458\tfoo!, "missing '118624458 foo'");
-    like(stdout, qr!118784226\tbar\|foo!, "missing '118784226 bar|foo'");
-    like(stdout, qr!103117741\tbar\s!, "missing '103117741 bar'");
+    like(stdout, qr!118559796\|1\|bar!, "missing '118559796 bar'");
+    like(stdout, qr!118624458\|1\|foo!, "missing '118624458 foo'");
+    like(stdout, qr!118784226\|2\|bar foo!, "missing '118784226 bar|foo'");
+    like(stdout, qr!103117741\|1\|bar\s!, "missing '103117741 bar'");
     unlike(stdout, qr![\s\|]([^\s\|]+)(?=\|)\S*\|\1!, "duplicate listing in result");
 };
 }
