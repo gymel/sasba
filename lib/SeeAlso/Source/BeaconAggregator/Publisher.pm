@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_84";
+our $VERSION = "0.2_85";
 
 =head1 NAME
 
@@ -487,7 +487,7 @@ XxX
     }
   else {
       print $cgi->header(-status => "300 Multiple Choices for identifier '$canon'",
-                            -nph => 1,    # for older CGI/mod_perl?
+#                           -nph => 1,    # for older CGI/mod_perl???
                          %headerdefaults);
 # mod_perl overrides the header and adds a custom document at the end of everything
 # therefore we force the header out (a simple print "" does not suffice) and then can

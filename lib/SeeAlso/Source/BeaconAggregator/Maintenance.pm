@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_84';
+    $VERSION     = '0.2_85';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -857,7 +857,7 @@ sub processbeaconheader {
           $format .= " -hasTARGET";
         }
       elsif ( $parsed ) {
-          push(@carp, "ERROR: header field #TARGET must contain placeholder {ID} and not {ALTID}");
+          push(@carp, "ERROR: header field #TARGET must contain placeholder {ID} only");
           delete $fieldref->{'TARGET'};
         }
       else {
