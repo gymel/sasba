@@ -49,8 +49,7 @@ requires:
   SeeAlso::Source: 0.56
   perl: v5.8.2
 resources:
+  bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=SeeAlso-Source-BeaconAggregator
   license: http://dev.perl.org/licenses/
-  bugtracker: https://github.com/gymel/sasba/issues
-  homepage: https://github.com/gymel/sasba
-  repository: https://github.com/gymel/sasba.git  
+  repository: https://github.com/gymel/sasba.git
 version: 0.2_86

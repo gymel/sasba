@@ -70,9 +70,15 @@
    },
    "release_status" : "testing",
    "resources" : {
+      "bugtracker" : {
+         "web" : "http://rt.cpan.org/Public/Dist/Display.html?Name=SeeAlso-Source-BeaconAggregator"
+      },
       "license" : [
          "http://dev.perl.org/licenses/"
-      ]
+      ],
+      "repository" : {
+         "url" : "https://github.com/gymel/sasba.git"
+      }
    },
    "version" : "0.2_86"
 }

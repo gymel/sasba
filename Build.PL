@@ -40,7 +40,22 @@ my $build = Module::Build->new(
 #	script_files => [
 #	'bin/sasbactrl',
 #		],
-	license => 'perl',
+    license => 'perl',
+  meta_merge => {
+      resources => {
+# Spec 2
+#	repository => {
+#		url => 'https://github.com/gymel/sasba.git',
+#		web => 'https://github.com/gymel/sasba',
+#		type => 'git'},
+#	bugtracker  => {
+#		web => 'http://rt.cpan.org/Public/Dist/Display.html?Name=SeeAlso-Source-BeaconAggregator',
+#		mailto => 'THB@cpan.org',
+#	     },
+	repository => 'https://github.com/gymel/sasba.git',
+	bugtracker => 'http://rt.cpan.org/Public/Dist/Display.html?Name=SeeAlso-Source-BeaconAggregator',
+	},
+     },
 	create_makefile_pl => 'traditional',
     );
 
