@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_85";
+our $VERSION = "0.2_86";
 
 =head1 NAME
 
@@ -223,7 +223,9 @@ XxX
   push(@result, "#FORMAT: ".($beaconmeta{'FORMAT'} || $Defaults{'FORMAT'})."\n");
   push(@result, "#VERSION: ".($beaconmeta{'VERSION'} || $Defaults{'VERSION'})."\n");
   if ( $beaconmeta{'TARGET'} ) {
-      push(@result, "#TARGET: $beaconmeta{'TARGET'}\n")}
+      $beaconmeta{'TARGET'} =~ s/^\{BASE\}/$cgibase/;
+      push(@result, "#TARGET: $beaconmeta{'TARGET'}\n");
+    }
   elsif ( $cgibase ) {
       push(@result, "#TARGET: $cgibase?format=$uAformatname&id={ID}\n")}
   else {
@@ -479,6 +481,11 @@ XxX
 
   my $sources = new CGI($cgi);
   $sources->param(-name => 'id', -value=>"$canon");
+  unless ( $canon =~ /:\/\// ) {
+      my ($osd, $beaconmeta) = $self->get_meta;
+      my $prefix = $beaconmeta->{'PREFIX'} || "";
+      $canon = "$prefix$pretty" if $prefix;
+    };
   if ( my $multired = $extra->{redirect_300} ) {
       $sources->param(-name => 'format', -value=>$multired);
       print $cgi->redirect(-status => "300 Multiple Choices for identifier '$canon'",

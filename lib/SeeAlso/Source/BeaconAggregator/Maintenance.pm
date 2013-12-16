@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_85';
+    $VERSION     = '0.2_86';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -531,6 +531,19 @@ sub loadFile {
          ($id, @rest) = split(/\s*\|\s*/, $_, 4);
          ($id, $altid) = split(/\s*=\s*/, $id, 2) if $id;
          $id || ($recnil++, next);
+
+         if ( $options{'filter'} ) {
+             ($id, $altid) = &{$options{'filter'}}($id, $altid, @rest);
+             unless ( $id ) {
+                 $recign ++;
+                 unless ( ++$reccount % 10000 ) {
+                     $self->{dbh}->{AutoCommit} = 1;
+                     print "$reccount\n" if $options{'verbose'};
+                     $self->{dbh}->{AutoCommit} = 0;
+                   };
+                 next lines;
+               };
+           };
          $altid ||= "";
 
          my($hits, $info, $link);
@@ -627,6 +640,7 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
            }
          else {
              croak("Could not insert: ($id, $hits, $info, $link): ".$inserthandle->errstr)};
+
          unless ( ++$reccount % 10000 ) {
              $self->{dbh}->{AutoCommit} = 1;
              print "$reccount\n" if $options{'verbose'};
@@ -704,7 +718,7 @@ carp("update in trouble: $replacehandle->errstring [$showme l.$.]");
 # my ($counti, $countu) = ($ct0ref->[0] || 0, $ct0ref->[1] || 0);
 
   my ($updh, $updexpl) = $self->stmtHdl(<<"XxX");
-UPDATE OR FAIL repos SET counti=?,countu=?,fstat=?,utime=?,ustat=? WHERE seqno==?;
+UPDATE OR FAIL repos SET counti=?,countu=?,fstat=?,utime=?,ustat=?,sort=? WHERE seqno==?;
 XxX
 
   my $counti = $self->idStat($collno, 'distinct' => 0) || 0;
@@ -714,10 +728,11 @@ XxX
       printf("WARNING: expected unchanged number %u valid records, counted %u\n", $fields->{'_counti'}, $counti) if $fields->{'_counti'} != $counti;
     };
 
+  my $sort = $fields->{'_sort'} || "";
   my $countu = $numchg ? ( $self->idStat($collno, 'distinct' => 1) || 0 )
                        : ( $fields->{'_countu'} || $self->idStat($collno, 'distinct' => 1) || 0 );
-  $self->stmtExplain($updexpl, $counti, $countu, $statline, time(), "successfully loaded", $collno) if $ENV{'DBI_PROFILE'};
-  $updh->execute($counti, $countu, $statline, time(), "successfully loaded", $collno)
+  $self->stmtExplain($updexpl, $counti, $countu, $statline, time(), "successfully loaded", $sort, $collno) if $ENV{'DBI_PROFILE'};
+  $updh->execute($counti, $countu, $statline, time(), "successfully loaded", $sort, $collno)
       or croak("Could not execute >".$updh->{Statement}."<: ".$updh->errstr);
   close(BKN);
 
@@ -930,6 +945,7 @@ sub processbeaconheader {
 
   my (@fn, @fd);
   while ( my ($key, $val) = each %$fieldref ) {
+      next unless defined $val;
       my $dbkey = "";
       if ( $dbkey = SeeAlso::Source::BeaconAggregator->beaconfields($key) ) {
           push(@fn, $dbkey)}
@@ -938,7 +954,7 @@ sub processbeaconheader {
       else {
           next};
       my $myval = $val;
-      unless ( $myval =~ /^\d*$/ ) {
+      unless ( $myval =~ /^\d+$/ ) {
           $myval =~ s/'/''/g;
           $myval = "'".$myval."'";
         };
@@ -1059,13 +1075,13 @@ sub update {
   my $alias = ($sq_or_alias =~ /^\d+$/) ? "" : $sq_or_alias;
   my $feedname = SeeAlso::Source::BeaconAggregator->beaconfields("FEED");
   my ($ssth, $ssthexpl) = $self->stmtHdl(<<"XxX");
-SELECT seqno, uri, alias, $feedname, ftime, mtime FROM repos $cond;
+SELECT seqno, uri, alias, $feedname, ftime, mtime, sort FROM repos $cond;
 XxX
   $self->stmtExplain($ssthexpl, @cval) if $ENV{'DBI_PROFILE'};
   $ssth->execute(@cval) or croak("Could not execute >".$ssth->{Statement}."<: ".$ssth->errstr);
   croak("Select old instance error: ".$ssth->errstr) if $ssth->err;
   my $aryref = $ssth->fetchrow_arrayref;
-  my ($osq, $ouri, $oalias, $feed, $fetchtime, $modtime) = $aryref ? @$aryref : ();
+  my ($osq, $ouri, $oalias, $feed, $fetchtime, $modtime, $osort) = $aryref ? @$aryref : ();
 
   my $uri = $params->{'_uri'} || $ouri || $feed;
   croak("Cannot update $sq_or_alias: URI not given nor determinable from previous content") unless $uri;
@@ -1157,7 +1173,7 @@ XxX
       # early cleanup since everything might be huge....
       $contref = $response = undef;
 
-      my ($collno, $count, $statref) = $self->loadFile($tmpfile, {_alias => $alias, _uri => $uri, _ruri => $nuri, _mtime => $lm}, %options);
+      my ($collno, $count, $statref) = $self->loadFile($tmpfile, {_alias => $alias, _uri => $uri, _ruri => $nuri, _mtime => $lm, _sort => $osort}, %options);
       if ( ! $collno && $osq ) {
           my ($usth, $usthexpl) = $self->stmtHdl(<<"XxX");
 UPDATE OR FAIL repos SET utime=?,ustat=? WHERE seqno==?;

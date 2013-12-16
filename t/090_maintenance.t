@@ -47,7 +47,7 @@ subtest "purge" => sub {
         ok($use->update('baz'), 'reload');
         test_counts ("post-update",
         	1 => ["foo", undef, "...", 3, 3],
-        	6 => ["baz", $file_uri, "...", 5, 3],
+        	8 => ["baz", $file_uri, "...", 5, 3],
           );
 };
 
@@ -55,7 +55,7 @@ subtest "unload" => sub {
 	plan tests => 5;
         test_counts ("pre-unload",
         	1 => ["foo", undef, "...", 3, 3],
-        	6 => ["baz", $file_uri, "...", 5, 3],
+        	8 => ["baz", $file_uri, "...", 5, 3],
           );
         $use->unload('baz');
         test_counts ("post-unload",

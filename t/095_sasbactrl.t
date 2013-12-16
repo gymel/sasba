@@ -9,11 +9,13 @@ BEGIN {
   };
 }
 
+use URI::file;
+
 my $dsn = "testdb";
 my $line;
 my $cmd = "blib/script/sasbactrl";
 
-use Test::More tests => 21;
+use Test::More tests => 24;
 SKIP: {
     eval {
 	require Test::Command::Simple;
@@ -133,15 +135,45 @@ subtest "beacon w/o REVISIT" => sub {
     like(stdout, qr!FEED\s*:\s*http://localhost:1234/testbeacon.txt!, "correct FEED in result: ");
   };
 
-# update
-subtest "update" => sub {
+# load
+subtest "load" => sub {
     plan tests => 7;
 
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "load", "bar", "http://www.example.com/beacon2.txt", "t/beacon2.txt");
     is(rc >> 8, 0, "ask for 'load': ".stderr);
     is(stderr, "", "warnings on 'load': ".stderr);
-    like(stdout, qr!NOTICE: New sequence \d for bar: processed 7 Records from 13 lines!, "correct sequence in result: ");
+    like(stdout, qr!NOTICE: New sequence \d+ for bar: processed 7 Records from 13 lines!, "correct sequence in result: ");
     like(stdout, qr!\(0 replaced, 5 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored\)!, "correct stats in result: ");
+  };
+
+subtest "update with blacklist" => sub {
+    plan tests => 7;
+
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "update", "--force", "--blacklist", "^103", "bar", URI::file->new_abs("t/beacon2.txt"));
+    is(rc >> 8, 0, "ask for 'update': ".stderr);
+    is(stderr, "", "warnings on 'update': ".stderr);
+    like(stdout, qr!NOTICE: New sequence \d+ for bar: processed 7 Records from 13 lines!, "correct sequence in result: ");
+    like(stdout, qr!\(2 replaced, 0 new, 3 deleted, 2 duplicate, 0 nil, 0 invalid, 3 ignored\)!, "correct stats in result: ");
+  };
+
+subtest "update with whitelist" => sub {
+    plan tests => 7;
+
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "update", "--force", "--whitelist", "^103", "bar");
+    is(rc >> 8, 0, "ask for 'load': ".stderr);
+    is(stderr, "", "warnings on 'load': ".stderr);
+    like(stdout, qr!NOTICE: New sequence \d+ for bar: processed 7 Records from 13 lines!, "correct sequence in result: ");
+    like(stdout, qr!\(0 replaced, 3 new, 2 deleted, 0 duplicate, 0 nil, 0 invalid, 4 ignored\)!, "correct stats in result: ");
+  };
+
+subtest "update" => sub {
+    plan tests => 7;
+
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "update", "--force", "bar");
+    is(rc >> 8, 0, "ask for 'load': ".stderr);
+    is(stderr, "", "warnings on 'load': ".stderr);
+    like(stdout, qr!NOTICE: New sequence \d+ for bar: processed 7 Records from 13 lines!, "correct sequence in result: ");
+    like(stdout, qr!\(3 replaced, 2 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored\)!, "correct stats in result: ");
   };
 
 # idstat
@@ -181,13 +213,13 @@ subtest "idlist" => sub {
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idlist");
     is(rc >> 8, 0, "ask for 'idlist': ".stderr);
     is(stderr, "", "warnings on 'idlist': ".stderr);
-    like(stdout, qr!118784226\b.*\t7,,de.wikisource.org,http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226!, "missing '118784226 ... 7,,de.wikisource.org,...'");
+    like(stdout, qr!118784226\b.*\t12,,de.wikisource.org,http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226!, "missing '118784226 ... 12,,de.wikisource.org,...'");
     like(stdout, qr!118624458\t!, "missing '118624458'");
 
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idlist", "103%");
     is(rc >> 8, 0, "ask for 'idlist': ".stderr);
     is(stderr, "", "warnings on 'idlist': ".stderr);
-    like(stdout, qr!103117741\b.*\t7,,!, "missing '103117741'");
+    like(stdout, qr!103117741\b.*\t12,,!, "missing '103117741'");
     unlike(stdout, qr!\b118784226\b!, "unwanted '118784226'");
   };
 

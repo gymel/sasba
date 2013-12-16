@@ -11,7 +11,7 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.2_85';
+our $VERSION = '0.2_86';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;
@@ -30,7 +30,7 @@ my $verbose = 1;
 my $ignore_header_errors = 0;
 my $action = "list";
 my $dbroot = "./beacondbs";
-my ($dsn, $cache_size, @pragmas, @presets);
+my ($dsn, $cache_size, @pragmas, @presets, @idfilters, $idfinish);
 my ($distinct, $force, $keeposd, $quiet, $dbfile, $itype, $redirs);
 
 #  Application constants
@@ -99,6 +99,10 @@ Options:
   --dbroot     ($dbroot)
   --ignore-header-errors  [for update and load]
   --distinct  [for idcounts and idstat]
+
+  --whitelist RE     for [update and load]
+  --blacklist RE     for [update and load]
+
   --preset HEADER=value  [for "beacon", repeatable]
 
   --pragma [SQLite pragma]  (repeatable)
@@ -173,6 +177,8 @@ GetOptions (
   'cache_size=s' => \$cache_size,
   'pragma=s' => \@pragmas,
   'preset=s' => \@presets,
+  'whitelist=s' => sub { push(@idfilters, "m\x0e$_[1]\x0e && return \@_;"); $idfinish = 'undef'; },
+  'blacklist=s' => sub { push(@idfilters, "m\x0e$_[1]\x0e && return undef;"); $idfinish = '@_'; },
   'dsn=s' => \$dsn,
 ) or pod2usage({-message => 'Invalid option encountered', -exitval => 2});
 
@@ -186,6 +192,11 @@ $dbroot ||= "";
 $dbfile ||= "";
 $dsn ||= "";
 
+my $filtersub;
+if ( @idfilters ) {
+    $filtersub = eval "sub { local(\$_) = \@_; @idfilters ; return $idfinish;}";
+  }
+
 local($|) = 1 if $verbose;
 
 my %passopts = (
@@ -193,6 +204,7 @@ my %passopts = (
   ($force ? ( 'force' => $force) : ()),
   ($verbose ? ( 'verbose' => $verbose) : ()),
   ($ignore_header_errors ? ( 'ignore-header-errors' => $ignore_header_errors) : ()),
+  ($filtersub ? ( 'filter' => $filtersub) : ()),
 );
 
 
@@ -768,7 +780,7 @@ elsif ( ($action eq "dumpmeta") or ($action eq "beacon") ) {
       };
     require SeeAlso::Source::BeaconAggregator::Publisher or die "could not require Publisher extension";
     SeeAlso::Source::BeaconAggregator::Publisher->activate();   # "recast" all objects
-    my $preset = {'FORMAT' => 'PND-BEACON'};
+    my $preset = {'FORMAT' => 'BEACON', 'VERSION' => '0.1'};
     foreach my $pset ( @presets ) {
         $pset =~ s/^(['"])([^=]+)\1\s*=/$2=/;
         $pset =~ s/=\s*(['"])([^=]+)\1$/=$2/;

@@ -1,5 +1,8 @@
 Revision history for Perl module SeeAlso::Source::BeaconAggregator
 
+0.02_86 2013-12-16
+    - load filters
+
 0.02_75 2012-11-13
     - more intelligently reuse global counts
     - repeatable --pragma args for sasbactrl (get / set: simply piped thru)

@@ -2,7 +2,7 @@
 
 # t/010_beacon.t - check module loading and create testing directory
 
-use Test::More tests => 18;
+use Test::More tests => 19;
 use URI::file;
 use LWP::UserAgent;
 use HTTP::Request;
@@ -184,6 +184,7 @@ subtest 'headers' => sub {
 		_counti => 3, _countu => 3,
 		_fstat => '0 replaced, 3 new, 0 deleted, 1 duplicate, 0 nil, 0 invalid, 0 ignored',
 		_ustat => 'successfully loaded',
+		_sort => '',
 	      }],
 	3 => [{ VERSION => 0.1,
 		FORMAT => 'BEACON',
@@ -200,6 +201,7 @@ subtest 'headers' => sub {
 		_counti => 5, _countu => 3,
 		_fstat => '5 replaced, 0 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored',
 		_ustat => 'successfully loaded',
+		_sort => '',
 	      }],
 	4 => [{ VERSION => 0.1,
 		FORMAT => 'BEACON',
@@ -215,6 +217,7 @@ subtest 'headers' => sub {
 		_counti => 0, _countu => 0,
 		_fstat => '0 replaced, 5 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored',
 		_ustat => 'purged',
+		_sort => '',
 	      }],
 	);
 	while ( my ($resultref, $metaref) = $use->headers() ) {
@@ -291,5 +294,27 @@ subtest 'update+unload' => sub {
 	ok(defined $seq_del, "unloaded beacon file");
 	ok($seq_del && ($seq_del > 0), "something was purged");
 	is($seq_del, 1, "expected number of deleted sequences");
+  };
+
+# filter
+my $filtersubbl = sub { local($_) = @_; return undef if /^103117741$/; return @_; };
+my $filtersubwl = sub { local($_) = @_; return undef unless /^103117741$/; return @_; };
+subtest 'update with filter' => sub {
+	plan tests => 6;
+        my $message = "undefined?";
+
+	($seqno, $rec_ok, $message) = $use->update("bar", {_uri => $file_uri}, verbose => 1, filter => $filtersubbl);
+	is($seqno, 6, "seqno was incremented");
+	is($rec_ok, 2, "number of unique records loaded");
+        (undef, $message) = $use->headerfield($seqno, '_fstat');
+        like($message, qr/\b3 ignored/, "ignored record count in message"); 
+
+	($seqno, $rec_ok, $message) = $use->update("bar", {}, force => 1, filter => $filtersubwl);
+	is($seqno, 7, "seqno was incremented");
+	is($rec_ok, 3, "number of unique records loaded");
+        (undef, $message) = $use->headerfield($seqno, '_fstat');
+        like($message, qr/\b4 ignored/, "ignored record count in message"); 
+
+	my $seq_del = $use->unload("bar");
   };
 
