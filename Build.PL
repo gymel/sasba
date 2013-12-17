@@ -42,6 +42,13 @@ my $build = Module::Build->new(
 #		],
 	license => 'perl',
 	create_makefile_pl => 'traditional',
+	meta_merge => {
+          resources => {
+            repository => 'https://github.com/gymel/sasba.git',
+            bugtracker => 'htps://github.com/gymel/sasba/issues',
+            homepage => 'https://github.com/gymel/sasba',
+          }
+        }
     );
 
 $build->create_build_script();
