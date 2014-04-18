@@ -1,8 +1,8 @@
 # -*- perl -*-
 
-# t/020_seealso.t - test aggregator methods only
+# t/030_seealso.t - test aggregator methods only
 
-use Test::More tests => 13;
+use Test::More tests => 14;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator' );
@@ -101,11 +101,11 @@ subtest 'query existing explicit' => sub {
 
 	($label, $description, $url) = $response->get(1);    # from foo
 	is($label, "???", "normalized label (1)");
-	is($description, "", "description (1)");
+	is($description, "foo", "description (1)");
 	is($url, "http://d-nb.info/gnd/118784226", "url (1)");
 
 	is($response->toJSON(), 
-	   '["118784226",["I Cared [de.wikisource.org]","???"],["I Cared",""],["http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226","http://d-nb.info/gnd/118784226"]]',
+	   '["118784226",["I Cared [de.wikisource.org]","???"],["I Cared","foo"],["http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226","http://d-nb.info/gnd/118784226"]]',
            "JSON string");
   };
 
@@ -136,6 +136,23 @@ subtest 'query existing altid' => sub {
 	   "JSON string");
   };
 
+subtest 'query existing new altid' => sub {
+	plan tests => 7;
+	my $response = $use->query('100001718');
+	isa_ok($response, "SeeAlso::Response", "Response");
+	is($response->size, 1, "Size of response");
+	is($response->query, "100001718", "normalized query");
+
+	my($label, $description, $url) = $response->get(0);
+	is($label, "SUDOC [Q533022]", "normalized label (0)");
+	is($description, "Mapping from GND IDs to SUDOC IDs (via Wikidata Q-Items)", "description (0)");
+	is($url, "http://www.idref.fr/117503258", "url (0)");
+
+	is($response->toJSON(), 
+	   '["100001718",["SUDOC [Q533022]"],["Mapping from GND IDs to SUDOC IDs (via Wikidata Q-Items)"],["http://www.idref.fr/117503258"]]',
+	   "JSON string");
+  };
+
 subtest 'query with filter' => sub {
 	plan tests => 10;
 	my ($response, $label, $description, $url);
@@ -148,7 +165,7 @@ subtest 'query with filter' => sub {
 	$response = $use->query('118784226');
 	is($response->size, 1, "Size of filtered response 2");
 	is($response->toJSON(), 
-	   '["118784226",["???"],[""],["http://d-nb.info/gnd/118784226"]]',
+	   '["118784226",["???"],["foo"],["http://d-nb.info/gnd/118784226"]]',
 	   "JSON string");
 
         ok($use->set_aliasfilter(), "clear Filter");
@@ -162,7 +179,7 @@ subtest 'query with filter' => sub {
 	$response = $use->query('118784226');
 	is($response->size, 2, "Size of unfiltered response 2");
 	is($response->toJSON(), 
-	   '["118784226",["I Cared [de.wikisource.org]","???"],["I Cared",""],["http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226","http://d-nb.info/gnd/118784226"]]',
+	   '["118784226",["I Cared [de.wikisource.org]","???"],["I Cared","foo"],["http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226","http://d-nb.info/gnd/118784226"]]',
 	   "JSON string");
 
   };

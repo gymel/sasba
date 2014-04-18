@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_86';
+    $VERSION     = '0.2_87';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -555,12 +555,23 @@ sub loadFile {
          if ( @rest && ($rest[0] =~ /^\d*$/) ) {
              $hits = shift @rest;
                                     # really disregard hits with explicit 0?
-             $info = shift @rest || "";
+             if ( (!$altid) and (!$link) and ($format =~ /\baltTARGET\b/) ) {
+                 $altid = shift @rest || "";
+               }
+             else {
+                 $info = shift @rest || "";
+               };
            }
          elsif ( defined $rest[1] ) {
              $hits = "";
-             shift @rest;
-             $info = shift @rest;
+             if ( (!$altid) and (!$link) and ($format =~ /\baltTARGET\b/) ) {
+                 $info = shift @rest;
+                 $altid = shift @rest;
+               }
+             else {
+                 shift @rest;
+                 $info = shift @rest;
+               };
            }
          elsif ( defined $rest[0] ) {
              $hits = "";
@@ -816,11 +827,17 @@ sub processbeaconheader {
     }
   elsif ( $fieldref->{'FORMAT'} ) {
       $format = $fieldref->{'FORMAT'}}
+  elsif  ( $fieldref->{'VERSION'} or $fieldref->{'TARGET'} or $fieldref->{'PREFIX'} or $fieldref->{'MESSAGE'} ) {
+      push(@carp, "WARNING: header line #FORMAT: BEACON should be supplied")}
+  elsif ( $self->{accept}->{'FORMAT'} ) {
+      push(@carp, "ERROR: header line #FORMAT is missing")}
   else {
-      push(@carp, "ERROR: header field #FORMAT is mandatory")};
+      push(@carp, "WARNING: header line #FORMAT: BEACON should be supplied")};
 
+  if ( $fieldref->{'FORMAT'} && ($fieldref->{'FORMAT'} =~ /v(?:ersion)?\s*(\d+(?:\.\d*)?)/i) ) {
+          $fieldref->{'VERSION'} ||= $1};
   unless ( $fieldref->{'VERSION'} ) {
-       $fieldref->{'VERSION'} ||= "0.1";
+       $fieldref->{'VERSION'} = $fieldref->{'FORMAT'} ? "0.1" : "1.0";
        push(@carp, "NOTICE: added header field #VERSION as '".$fieldref->{'VERSION'}."'");
     };
   if ( $self->{accept}->{'VERSION'} ) {
@@ -872,7 +889,14 @@ sub processbeaconheader {
           $format .= " -hasTARGET";
         }
       elsif ( $parsed ) {
-          push(@carp, "ERROR: header field #TARGET must contain placeholder {ID} only");
+          if ( exists $fieldref->{'ALTTARGET'} ) {
+              push(@carp, "ERROR: header field #TARGET must contain placeholder {ID} only");
+            }
+          else {
+              push(@carp, "WARNING: Adding implicit {ID} to #TARGET as #ALTTARGET");
+              $fieldref->{'ALTTARGET'} = $parsed."%2\$s";
+              $format .= " -altTARGET";
+            }
           delete $fieldref->{'TARGET'};
         }
       else {

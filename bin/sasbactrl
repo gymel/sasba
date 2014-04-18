@@ -11,7 +11,7 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.2_86';
+our $VERSION = '0.2_87';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;
@@ -245,8 +245,8 @@ my $db = SeeAlso::Source::BeaconAggregator::Maintenance->new(
         $dsn ? ('dsn' => $dsn) : (),
         ref($iclass) ? ('identifierClass' => $iclass) : (),
         'accept' => {
-		'VERSION' => qr'0\.[12]',
-		 'FORMAT' => '^([GP]ND-)?B(?i:EACON)$'},
+		'VERSION' => qr'0\.[12]|1.0',
+		 'FORMAT' => '^([GP]ND-)?B(?i:EACON)(\s+[vV]?1.0)?$'},
         'verbose' => $verbose,
     ) or die "could not open database $dsn / $dbfile";
 

@@ -22,11 +22,11 @@ my $expect = << "XxX";
 #FORMAT: BEACON
 #VERSION: 0.1
 #TARGET: http://beacon.example.com/test/?format=sources&id={ID}
-#TIMESTAMP: 2011-05-19T15:49:19Z
+#TIMESTAMP: 2014-04-19T15:49:19Z
 #FEED: http://beacon.example.com/test/?format=beacon
 #MESSAGE: encountered
-#X-REVISION: 5 [2011-05-19T21:21:04Z]
-#X-EXTENT: 5 unique identifiers 
+#X-REVISION: 6 [2014-04-18T21:21:04Z]
+#X-EXTENT: 7 unique identifiers 
 XxX
 
 my $tpattern = '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z';
@@ -71,7 +71,7 @@ subtest "dumpmeta w/o REVISIT" => sub {
 
 #beacon
 subtest "beacon with REVISIT" => sub {
-    plan tests => 46;
+    plan tests => 50;
 
     my %bexpected = (   # count column is the number of sequences which contain the identifier!
       '118784226' => [2],
@@ -79,6 +79,8 @@ subtest "beacon with REVISIT" => sub {
       '118624458' => [undef],
       '103117741' => [undef],
       '118559796' => [undef],
+      '10000022-8' => [undef],
+      '100001718' => [undef],
     );
 
     # %hexpected was initialized from previous test
@@ -136,10 +138,10 @@ subtest "beacon with REVISIT" => sub {
     close(SLURP);
 
     my @hexcess = keys %hexpected;
-    is("", "@hexcess", "unexpected header lines from beacon export");
+    is("", "@hexcess", "unexpected header lines @hexcess from beacon export");
 
     my @bexcess = keys %bexpected;
-    is("", "@bexcess", "unprocessed identifiers from beacon export");
+    is("", "@bexcess", "unprocessed identifiers @bexcess from beacon export");
     unlink('beacon.out');
   };
 

@@ -19,13 +19,13 @@ name: SeeAlso-Source-BeaconAggregator
 provides:
   SeeAlso::Source::BeaconAggregator:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
-    version: 0.2_86
+    version: 0.2_87
   SeeAlso::Source::BeaconAggregator::Maintenance:
     file: lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm
-    version: 0.2_86
+    version: 0.2_87
   SeeAlso::Source::BeaconAggregator::Publisher:
     file: lib/SeeAlso/Source/BeaconAggregator/Publisher.pm
-    version: 0.2_86
+    version: 0.2_87
 recommends:
   Getopt::Long: 0
   LWP: 5.827
@@ -52,4 +52,4 @@ resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=SeeAlso-Source-BeaconAggregator
   license: http://dev.perl.org/licenses/
   repository: https://github.com/gymel/sasba.git
-version: 0.2_86
+version: 0.2_87

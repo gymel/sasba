@@ -2,7 +2,7 @@
 
 # t/010_beacon.t - check module loading and create testing directory
 
-use Test::More tests => 19;
+use Test::More tests => 20;
 use URI::file;
 use LWP::UserAgent;
 use HTTP::Request;
@@ -111,6 +111,19 @@ subtest 'purge' => sub {
 	is($rec_del, 5, "expected number of deleted records");
 };
 
+# newer semantics with target identifiers
+my $newfile = "t/beacon5.txt";
+my $newfile_uri = URI::file->new_abs($newfile);
+subtest 'versionone' => sub {
+	plan tests => 5;
+	($seqno, $rec_ok) = $use->update("sudoc", {_uri => $newfile_uri}, verbose => 1);
+	ok(defined $seqno, "load beacon file as uri from $newfile_uri");
+	ok($seqno && ($seqno > 0), "something new was loaded");
+	is($seqno, 5, "expected seqno");
+	ok($rec_ok  && ($rec_ok > 0), "records loaded");
+	is($rec_ok, 2, "number of unique records loaded");
+};
+
 # Seqnos
 subtest 'Seqnos' => sub {
 	plan tests => 2;
@@ -130,6 +143,7 @@ subtest 'RepoCols' => sub {
 		1 => "foo",
 		3 => "bar",
 		4 => "baz",
+		5 => "sudoc",
 	};
 	is_deeply($cols[0], $expected, 'expected RepoCols');
 };
@@ -167,7 +181,7 @@ subtest 'headerfield with args' => sub {
 
 # headers
 subtest 'headers' => sub {
-	plan tests => 13;
+	plan tests => 17;
 #	(my $file1_uri = $file_uri) =~ s/beacon2.txt/beacon1.txt/;
 	my %expected = (
 	1 => [{ VERSION => 0.1,
@@ -219,6 +233,22 @@ subtest 'headers' => sub {
 		_ustat => 'purged',
 		_sort => '',
 	      }],
+	5 => [{ VERSION => '1.0',
+                NAME => 'SUDOC',
+                DESCRIPTION => 'Mapping from GND IDs to SUDOC IDs (via Wikidata Q-Items)',
+		TIMESTAMP => '2014-04-18T12:28:01Z',
+		PREFIX => 'http://d-nb.info/gnd/',
+		ALTTARGET => 'http://www.idref.fr/{ALTID}',
+	      },
+	      {	_seqno => 5,
+		_alias => 'sudoc',
+		_uri => $newfile_uri, _ruri => $newfile_uri,
+		_mtime => 'xxxx-xx-xxTxx:xx:xxZ', _ftime => 'xxxx-xx-xxTxx:xx:xxZ', _utime => 'xxxx-xx-xxTxx:xx:xxZ',
+		_counti => 2, _countu => 2,
+		_fstat => '0 replaced, 2 new, 0 deleted, 0 duplicate, 0 nil, 0 invalid, 0 ignored',
+		_ustat => 'successfully loaded',
+		_sort => '',
+	      }],
 	);
 	while ( my ($resultref, $metaref) = $use->headers() ) {
 	     last unless defined $resultref;
@@ -240,11 +270,12 @@ subtest 'headers' => sub {
 # headers
 # listCollections
 subtest 'listCollections' => sub {
-	plan tests => 10;
+	plan tests => 13;
 	my %expected = (  # Seqno, Alias, Uri, Mtime, Counti, Countu
 	1 => [1, "foo", undef, "...", 3, 3],
 	3 => [3, "bar", $file_uri, "...", 5, 3],
 	4 => [4, "baz", $gzfile_uri, "...", 0, 0],
+	5 => [5, "sudoc", $newfile_uri, "...", 2, 2],
 	);
 	while ( my @row = $use->listCollections() ) {
 	     my $seq;
@@ -264,8 +295,8 @@ subtest 'admin' => sub {
 	plan tests => 5;
 	my $expected = { # key, value
 	    DATA_VERSION => 2,
-            gcounti => 8,
-            gcountu => 5,
+            gcounti => 10,
+            gcountu => 7,
 #	    IDENTIFIER_TYPE => "",
 	  };
 	my $admref = $use->admin();
@@ -286,7 +317,7 @@ subtest 'admin' => sub {
 subtest 'update+unload' => sub {
 	plan tests => 5;
 	($seqno, $rec_ok) = $use->update("baz", {}, (force => 1));
-	is($seqno, 5, "seqno was incremented");
+	is($seqno, 6, "seqno was incremented");
 	is($rec_ok, 5, "number of unique records loaded");
 	my ($rows, @oldvals) = $use->headerfield("baz", 'INSTITUTION', 'I Cared');
 
@@ -304,13 +335,13 @@ subtest 'update with filter' => sub {
         my $message = "undefined?";
 
 	($seqno, $rec_ok, $message) = $use->update("bar", {_uri => $file_uri}, verbose => 1, filter => $filtersubbl);
-	is($seqno, 6, "seqno was incremented");
+	is($seqno, 7, "seqno was incremented");
 	is($rec_ok, 2, "number of unique records loaded");
         (undef, $message) = $use->headerfield($seqno, '_fstat');
         like($message, qr/\b3 ignored/, "ignored record count in message"); 
 
 	($seqno, $rec_ok, $message) = $use->update("bar", {}, force => 1, filter => $filtersubwl);
-	is($seqno, 7, "seqno was incremented");
+	is($seqno, 8, "seqno was incremented");
 	is($rec_ok, 3, "number of unique records loaded");
         (undef, $message) = $use->headerfield($seqno, '_fstat');
         like($message, qr/\b4 ignored/, "ignored record count in message"); 

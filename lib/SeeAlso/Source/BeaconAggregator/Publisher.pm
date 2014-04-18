@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_86";
+our $VERSION = "0.2_87";
 
 =head1 NAME
 
@@ -788,7 +788,9 @@ XxX
           elsif ( $repos->{'ALTTARGET'} && $vary->{'altid'} ) {
               $uri = sprintf($repos->{'ALTTARGET'}, $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
           elsif ( $repos->{'TARGET'} ) {
-              $uri = sprintf($repos->{'TARGET'}, $p)};
+              $uri = sprintf($repos->{'TARGET'}, $p)}
+          elsif ( $repos->{'ALTTARGET'} ) {
+              $uri = sprintf($repos->{'ALTTARGET'}, $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($p))};
 
           my $redundant = ($didalreadysee{$uri}++) ? "subsequent" : "";
 
@@ -870,7 +872,9 @@ XxX
               elsif ( $repos->{'ALTTARGET'} && $vary->{'altid'} ) {
                   $uri = sprintf($repos->{'ALTTARGET'}, $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($vary->{'altid'}))}
               elsif ( $repos->{'TARGET'} ) {
-                  $uri = sprintf($repos->{'TARGET'}, $p)};
+                  $uri = sprintf($repos->{'TARGET'}, $p)}
+              elsif ( $repos->{'ALTTARGET'} ) {
+                  $uri = sprintf($repos->{'ALTTARGET'}, $p, SeeAlso::Source::BeaconAggregator::urlpseudoescape($p))};
 
               my $redundant = ($didalreadysee{$uri}++) ? "subsequent" : "";
 

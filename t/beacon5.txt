@@ -1,0 +1,11 @@
+#NAME: SUDOC
+#DESCRIPTION: Mapping from GND IDs to SUDOC IDs (via Wikidata Q-Items)
+#CREATOR: Magnus Manske
+#CREATOR: https://www.wikidata.org/wiki/User:Magnus_Manske
+#HOMEPAGE: http://tools.wmflabs.org/wikidata-todo/beacon.php
+#TIMESTAMP: 2014-04-18T12:28:01+00:00
+#PREFIX: http://d-nb.info/gnd/
+#TARGET: http://www.idref.fr/
+
+10000022-8||086327216
+100001718|Q533022|117503258

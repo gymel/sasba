@@ -2,7 +2,7 @@
 
 # t/020_stats_id.t - check dumps and maintenance 
 
-use Test::More tests => 132;
+use Test::More tests => 162;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator::Maintenance' );
@@ -29,11 +29,11 @@ isa_ok ($use, 'SeeAlso::Source::BeaconAggregator');
 # idStat
 my $itot = $use->idStat();
 ok($itot, 'nonzero idStat');
-is($itot, 8, 'idStat returned unexpected count');
+is($itot, 10, 'idStat returned unexpected count');
 # idStat distinct
 $itot = $use->idStat(0, (distinct => 1));
 ok($itot, 'nonzero distinct idStat');
-is($itot, 5, ' distinct idStat returned unexpected count');
+is($itot, 7, ' distinct idStat returned unexpected count');
 # idStat for one alias
 $itot = $use->idStat('foo');
 ok($itot, 'nonzero idStat for foo');
@@ -47,6 +47,8 @@ my %cexpected = (
   '118624458' => [1, 2],
   '103117741' => [3, 0],
   '118559796' => [1, 0],
+  '' => [1, 0],
+  '100001718' => [1, 0],
 );
 while ( my (@clist) = $use->idCounts() ) {
     my $testref;
@@ -65,6 +67,8 @@ is("@cexcess", "", "undelivered identifiers for idCounts");
   '118624458' => [1, 2],
   '103117741' => [1, 0],
   '118559796' => [1, 0],
+  '' => [1, 0],
+  '100001718' => [1, 0],
 );
 while ( my (@clist) = $use->idCounts(0, (distinct => 1)) ) {
     my $testref;
@@ -81,15 +85,17 @@ is("@cexcess", "", "undelivered identifiers for distinct idCounts");
 # idList
 my %iexpected = (
   '118784226' => {"1:" => ["", "", "", ""], 
-                  "5:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
+                  "6:" => ["", "de.wikisource.org", "http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226", ""]
                  },
   '132464462' => {"1:" => [1, "", "", ""]},
   '118624458' => {"1:" => [2, "", "", ""]},
-  '103117741' => {"5:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
-                  "5:Tâtâ" => ["", "Test encoding only", "", "Tâtâ"],
-                  "5:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"],
+  '103117741' => {"6:45433" => ["", "Châtelain, Jean-Jacques", "", "45433"],
+                  "6:Tâtâ" => ["", "Test encoding only", "", "Tâtâ"],
+                  "6:45432" => ["", "Châtelain, Jacques-Jean", "", "45432"],
                  },
-  '118559796' => {"5:" =>, ["", "", "", ""]},
+  '118559796' => {"6:" =>, ["", "", "", ""]},
+  '' => {"5:086327216" => ["", "", "", "086327216"]},
+  '100001718' => {"5:117503258" => ["", "Q533022", "", "117503258"]},
 );
 while ( my (@ilist) = $use->idList() ) {
     ok(@ilist > 1, 'idList gave a tuple');

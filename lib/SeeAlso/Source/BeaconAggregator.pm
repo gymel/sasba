@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_86';
+    $VERSION     = '0.2_87';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -450,7 +450,7 @@ sub query {          # SeeAlso-Simple response
           $clusterid = $onerow->[0];}
     }
 
-  my ($tfield, $afield, $mfield, $m1field, $msfield, $dfield, $nfield, $ifield)
+  my (  $tfield, $afield, $mfield, $m1field, $msfield,   $dfield,   $nfield, $ifield)
     = map{ scalar $self->beaconfields($_) } 
 #        6      7         8       9          10          11          12   13
       qw(TARGET ALTTARGET MESSAGE ONEMESSAGE SOMEMESSAGE DESCRIPTION NAME INSTITUTION);
@@ -508,10 +508,13 @@ XxX
       elsif ( $onerow->[1] && $onerow->[7] ) {    # Konkordanzformat
           $uri = sprintf($onerow->[7], $p, urlpseudoescape($onerow->[1]))}
       elsif ( $onerow->[6] ) {                    # normales Beacon-Format
-          $uri = sprintf($onerow->[6], $p)};
+          $uri = sprintf($onerow->[6], $p)}
+      elsif ( $onerow->[7] ) {                    # Neues Format
+          $uri = sprintf($onerow->[7], $p, urlpseudoescape($p))};
       next unless $uri;
 
-      my $label =  $onerow->[8] || $onerow->[11] || $onerow->[12] || $onerow->[13] || "???";
+# MESSAGE || NAME || INSTITUTION || DESCRIPTION
+      my $label =  $onerow->[8] || $onerow->[12] || $onerow->[13] || $onerow->[11] || "???";
       if ( $hits == 1 ) {
           $label = $onerow->[9] if $onerow->[9]}
       elsif ( $hits == 0 ) {
@@ -519,12 +522,14 @@ XxX
       elsif ( $hits ) {
           ($label .= " (%s)") unless ($label =~ /(^|[^%])%s/)};
 
-      $label .= " [".$onerow->[4]."]" if $onerow->[4];
       $label = sprintf($label, $hits);
+      $label .= " [".$onerow->[4]."]" if $onerow->[4];
 
 #     my $description = $hits;     # entsprechend opensearchsuggestions: pleonastisch, langweilig
 #     my $description = $onerow->[12] || $onerow->[13] || $onerow->[8] || $onerow->[10] || $onerow->[5]; # NAME or INSTITUTION or SOMEMESSAGE or MESSAGE
-      my $description = $onerow->[13] || $onerow->[12] || $onerow->[8] || $onerow->[10] || $onerow->[5] || ""; # INSTITUTION or NAME or SOMEMESSAGE or MESSAGE
+# DESCRIPTION || INSTITUTION || NAME || SOMEMESSAGE || MESSAGE  || alias
+      my $description = $onerow->[11] || $onerow->[13] || $onerow->[12] || $onerow->[10] || $onerow->[8] || $onerow->[15] || ""; # INSTITUTION or NAME or SOMEMESSAGE or MESSAGE
+#     $description .= " [".$onerow->[1]."]" if $onerow->[1];
 
       $response->add($label, $description, $uri) unless $didalready{join("\x7f", $label, $description, $uri)}++;
     }

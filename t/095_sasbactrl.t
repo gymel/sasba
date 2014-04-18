@@ -167,13 +167,19 @@ subtest "update with whitelist" => sub {
   };
 
 subtest "update" => sub {
-    plan tests => 7;
+    plan tests => 14;
 
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "update", "--force", "bar");
-    is(rc >> 8, 0, "ask for 'load': ".stderr);
-    is(stderr, "", "warnings on 'load': ".stderr);
+    is(rc >> 8, 0, "ask for 'update': ".stderr);
+    is(stderr, "", "warnings on 'update': ".stderr);
     like(stdout, qr!NOTICE: New sequence \d+ for bar: processed 7 Records from 13 lines!, "correct sequence in result: ");
     like(stdout, qr!\(3 replaced, 2 new, 0 deleted, 2 duplicate, 0 nil, 0 invalid, 0 ignored\)!, "correct stats in result: ");
+
+    run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "update", "--force", "sudoc");
+    is(rc >> 8, 0, "ask for 'update': ".stderr);
+    is(stderr, "", "warnings on 'update': ".stderr);
+    like(stdout, qr!NOTICE: New sequence \d+ for sudoc: processed 2 Records from 11 lines!, "correct sequence in result: ");
+    like(stdout, qr!\(2 replaced, 0 new, 0 deleted, 0 duplicate, 0 nil, 0 invalid, 0 ignored\)!, "correct stats in result: ");
   };
 
 # idstat
@@ -187,7 +193,7 @@ subtest "idstat" => sub {
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idstat", "--distinct");
     is(rc >> 8, 0, "ask for 'idstat --distinct': ".stderr);
     is(stderr, "", "warnings on 'idstat --distinct': ".stderr);
-    is(stdout, "5 identifiers\n", "correct # of identifiers in idstat --distinct: ");
+    is(stdout, "7 identifiers\n", "correct # of identifiers in idstat --distinct: ");
   };
 
 # idcounts
@@ -213,13 +219,13 @@ subtest "idlist" => sub {
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idlist");
     is(rc >> 8, 0, "ask for 'idlist': ".stderr);
     is(stderr, "", "warnings on 'idlist': ".stderr);
-    like(stdout, qr!118784226\b.*\t12,,de.wikisource.org,http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226!, "missing '118784226 ... 12,,de.wikisource.org,...'");
+    like(stdout, qr!118784226\b.*\t13,,de.wikisource.org,http://toolserver.org/~apper/pd/person/pnd-redirect/ws/118784226!, "missing '118784226 ... 13,,de.wikisource.org,...'");
     like(stdout, qr!118624458\t!, "missing '118624458'");
 
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "idlist", "103%");
     is(rc >> 8, 0, "ask for 'idlist': ".stderr);
     is(stderr, "", "warnings on 'idlist': ".stderr);
-    like(stdout, qr!103117741\b.*\t12,,!, "missing '103117741'");
+    like(stdout, qr!103117741\b.*\t13,,!, "missing '103117741'");
     unlike(stdout, qr!\b118784226\b!, "unwanted '118784226'");
   };
 

@@ -2,7 +2,7 @@
 
 # t/090_maintenance.t - check beacon export
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 BEGIN { 
   use_ok( 'SeeAlso::Source::BeaconAggregator::Maintenance' );
@@ -24,42 +24,49 @@ subtest "deflate" => sub {
 	ok($use->deflate(), 'deflate = VACUUM+REINDEX+ANALYZE');
 };
 
-my $file_uri;
+my ($file_uri, $other_uri);
 ok($file_uri = ($use->headerfield('baz', '_uri'))[1], 'get file uri');
+ok($other_uri = ($use->headerfield('sudoc', '_uri'))[1], 'get other file uri');
 
 subtest "purge" => sub {
-	plan tests => 15;
+	plan tests => 19;
         test_counts ("pre-purge",
         	1 => ["foo", undef, "...", 3, 3],
-        	5 => ["baz", $file_uri, "...", 5, 3],
+        	5 => ["sudoc", $other_uri, "...", 2, 2],
+        	6 => ["baz", $file_uri, "...", 5, 3],
           );
         ok($use->purge('baz'), 'purge');
         test_counts ("post-purge",
         	1 => ["foo", undef, "...", 3, 3],
-        	5 => ["baz", $file_uri, "...", 0, 0],
+        	5 => ["sudoc", $other_uri, "...", 2, 2],
+        	6 => ["baz", $file_uri, "...", 0, 0],
           );
         ok($use->headerfield('baz', '_mtime', 0), 'reset mtime');
         test_counts ("post-purge",
         	1 => ["foo", undef, "...", 3, 3],
-        	5 => ["baz", $file_uri, "", 0, 0],
+        	5 => ["sudoc", $other_uri, "...", 2, 2],
+        	6 => ["baz", $file_uri, "", 0, 0],
           );
         # prepare forced reload
         ok($use->update('baz'), 'reload');
         test_counts ("post-update",
         	1 => ["foo", undef, "...", 3, 3],
-        	8 => ["baz", $file_uri, "...", 5, 3],
+        	5 => ["sudoc", $other_uri, "...", 2, 2],
+        	9 => ["baz", $file_uri, "...", 5, 3],
           );
 };
 
 subtest "unload" => sub {
-	plan tests => 5;
+	plan tests => 7;
         test_counts ("pre-unload",
         	1 => ["foo", undef, "...", 3, 3],
-        	8 => ["baz", $file_uri, "...", 5, 3],
+        	5 => ["sudoc", $other_uri, "...", 2, 2],
+        	9 => ["baz", $file_uri, "...", 5, 3],
           );
         $use->unload('baz');
         test_counts ("post-unload",
         	1 => ["foo", undef, "...", 3, 3],
+        	5 => ["sudoc", $other_uri, "...", 2, 2],
           );
 };
 
