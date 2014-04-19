@@ -144,12 +144,12 @@ subtest 'query existing new altid' => sub {
 	is($response->query, "100001718", "normalized query");
 
 	my($label, $description, $url) = $response->get(0);
-	is($label, "SUDOC [Q533022]", "normalized label (0)");
-	is($description, "Mapping from GND IDs to SUDOC IDs (via Wikidata Q-Items)", "description (0)");
+	is($label, "SUDOC", "normalized label (0)");
+	is($description, "Mapping from GND IDs to SUDOC IDs (via Wikidata Q-Items) [Q533022]", "description (0)");
 	is($url, "http://www.idref.fr/117503258", "url (0)");
 
 	is($response->toJSON(), 
-	   '["100001718",["SUDOC [Q533022]"],["Mapping from GND IDs to SUDOC IDs (via Wikidata Q-Items)"],["http://www.idref.fr/117503258"]]',
+	   '["100001718",["SUDOC"],["Mapping from GND IDs to SUDOC IDs (via Wikidata Q-Items) [Q533022]"],["http://www.idref.fr/117503258"]]',
 	   "JSON string");
   };
 

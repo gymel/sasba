@@ -523,13 +523,19 @@ XxX
           ($label .= " (%s)") unless ($label =~ /(^|[^%])%s/)};
 
       $label = sprintf($label, $hits);
-      $label .= " [".$onerow->[4]."]" if $onerow->[4];
+      $onerow->[4] = "" unless defined $onerow->[4];
+      $label .= " [".$onerow->[4]."]" if ($onerow->[4] =~ /[a-wyz]/) or ($onerow->[4] && ($onerow->[4] !~ /\d/));   # add info
 
 #     my $description = $hits;     # entsprechend opensearchsuggestions: pleonastisch, langweilig
 #     my $description = $onerow->[12] || $onerow->[13] || $onerow->[8] || $onerow->[10] || $onerow->[5]; # NAME or INSTITUTION or SOMEMESSAGE or MESSAGE
 # DESCRIPTION || INSTITUTION || NAME || SOMEMESSAGE || MESSAGE  || alias
       my $description = $onerow->[11] || $onerow->[13] || $onerow->[12] || $onerow->[10] || $onerow->[8] || $onerow->[15] || ""; # INSTITUTION or NAME or SOMEMESSAGE or MESSAGE
-#     $description .= " [".$onerow->[1]."]" if $onerow->[1];
+      if ( ($onerow->[4] =~ /\d/) and ($onerow->[4] !~ /[a-wyz]/) ) {
+          $description .= " [".$onerow->[4]."]"}   # add info
+      else {
+#         $onerow->[1] = "" unless defined $onerow->[1];
+#         $description .= " [".$onerow->[1]."]" if $onerow->[1];  # Add target identifier
+        };
 
       $response->add($label, $description, $uri) unless $didalready{join("\x7f", $label, $description, $uri)}++;
     }
