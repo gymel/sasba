@@ -73,6 +73,7 @@ Actions and Arguments:
   dumpmeta [cgi_base_url ...]     show beacon header
   beacon cgi_base_url [uAformatname]
 
+  setmeta "field: val" ["field: val" ...]
   loadmeta  header_template_file        load OSD and Beacon meta constants
 
   idststat [seqno/alias/pattern]
@@ -795,9 +796,40 @@ elsif ( ($action eq "dumpmeta") or ($action eq "beacon") ) {
         print @$headerref};
   }
 
+=item C<setmeta>
+
+Set OSD or beacon meta fields for the database.
+
+=cut
+
+elsif ( $action eq "setmeta" ) {
+    foreach ( @ARGV ) {
+        if ( /^#([A-Z][A-Z0-9-]*)(?::\s*(.*))?$/ ) {
+            my ($key, $val) = ($1, $2);
+            my $success;
+            if ( defined $val ) {
+                 $success = $db->setBeaconMeta($key, $val)}
+            else {
+                 $success = $db->clearBeaconMeta($key)};
+            print "#$key processed\n" if $success and $verbose;
+          }
+        elsif ( /^([A-Z][\w-]+)(?::\s*(.*))?$/ ) {
+            my ($key, $val) = ($1, $2);
+            my $success;
+            if ( defined $val ) {
+                 $success = $db->addOSD($key, $val)}
+            else {
+                 $success = $db->clearOSD($key)};
+            print "$key processed\n" if $success and $verbose;
+          }
+        else {
+            warn "cannot parse: >$_<"}
+      }
+  }
+
 =item C<loadmeta>
 
-Completely exchanges the OSD and beacon meta files for the 
+Completely exchanges the OSD and beacon meta fields for the 
 database by the contents of the file given as first argument.
 
 =cut
