@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_87";
+our $VERSION = "0.2_88";
 
 =head1 NAME
 
@@ -426,6 +426,7 @@ XxX
 
   my $c = $self->{identifierClass} || undef;
   my @rawres;
+  my %didalready;
   while ( my $onerow = $sth->fetchrow_arrayref ) {
       next if $onerow->[11] && exists $self->{'aliasfilter'}->{$onerow->[11]};
       my $uri = $onerow->[4];         # Evtl. Expliziter Link
@@ -459,7 +460,7 @@ XxX
       elsif ( $label = $onerow->[9] || $onerow->[10] || $onerow->[11] || "???" ) {
           $label .= " (".$onerow->[1].")" if $onerow->[1]}
 
-      push(@rawres, [$uri, $guri, $label, $onerow->[11], $onerow->[3]]);
+      push(@rawres, [$uri, $guri, $label, $onerow->[11], $onerow->[3]]) unless $didalready{join("\x7f", $label, $uri)}++;;
     };
   my $hits = scalar @rawres;
 
