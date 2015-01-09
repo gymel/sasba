@@ -11,7 +11,7 @@ use SeeAlso::Source::BeaconAggregator::Maintenance;
 use Getopt::Long;
 use Pod::Usage;
 
-our $VERSION = '0.2_88';
+our $VERSION = '0.2_89';
 
 ##### Compatibility
 use SeeAlso::Identifier::GND;
@@ -166,7 +166,7 @@ Prepare additional redirection index
 
 GetOptions (
   'verbose+' => \$verbose,
-  'quiet' => \$quiet,
+  'quiet+' => \$quiet,
   'distinct' => \$distinct,
   'force' => \$force,
   'keeposd' => \$keeposd,
@@ -564,9 +564,13 @@ elsif ( $action eq "update" ) {
         $timestampref = $db->RepoCols("TIMESTAMP") || 0;
 
         foreach ( sort {$a <=> $b} keys %$aliasref ) {
-            print $verbose ? "\n==> $aliasref->{$_} <==\n" : sprintf("%-10s - ", $aliasref->{$_});
+            my $linestart = "";
+            if ( $verbose ) {
+                print "\n==> $aliasref->{$_} <==\n"}
+            else {
+                $linestart =sprintf("%-10s - ", $aliasref->{$_})};
             unless ( $uriref->{$_} ) {
-                print "no uri known -> skipped\n";
+                print $linestart."no uri known -> skipped\n";
                 next;
               };
             my %stamps = (
@@ -607,15 +611,14 @@ elsif ( $action eq "update" ) {
 
                     if ( $xtime > $^T ) {
                         unless ( $verbose ) {
-                        printf "[%4s] next %30s (age: %s, %s)\n", $status, lct($xtime), $age, $info};
+                            printf ("%s[%4s] next %30s (age: %s, %s)\n", $linestart, $status, lct($xtime), $age, $info) unless $quiet && $quiet > 1};
                         next;
                       };
                   }
               };
 
             if ( !$verbose ) {
-                printf("[%4s] curr %30s (age: %s, %s)\n", "LOAD", lct(($stamps{"stime"} && ($stamps{"stime"} < $stamps{"mtime"})) ? $stamps{"stime"} : $stamps{"mtime"}), $age, "will reload");
-              }
+                printf("%s[%4s] curr %30s (age: %s, %s)\n", $linestart, "LOAD", lct(($stamps{"stime"} && ($stamps{"stime"} < $stamps{"mtime"})) ? $stamps{"stime"} : $stamps{"mtime"}), $age, "will reload")}
             elsif ( $force ) {
                 print @states};
             my ($cn, $cc) = $db->update($aliasref->{$_}, {}, %passopts, ($forcereload ? ( 'force' => 1) : ()), 'nostat' => 1);

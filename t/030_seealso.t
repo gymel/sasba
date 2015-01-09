@@ -118,21 +118,21 @@ subtest 'query existing altid' => sub {
 
 	my($label, $description, $url) = $response->get(0);
 	is($label, "I Cared [Châtelain, Jean-Jacques]", "normalized label (0)");
-	is($description, "I Cared", "description (0)");
+	is($description, "I Cared [45433]", "description (0)");
 	is($url, "http://www.hls-dhs-dss.ch/textes/d/D45433.php", "url (0)");
 
 	($label, $description, $url) = $response->get(1);
 	is($label, "I Cared [Test encoding only]", "normalized label (1)");
-	is($description, "I Cared", "description (1)");
+	is($description, "I Cared [Tâtâ]", "description (1)");
 	is($url, "http://www.hls-dhs-dss.ch/textes/d/DT%C3%A2t%C3%A2.php", "url (1)");
 
 	($label, $description, $url) = $response->get(2);
 	is($label, "I Cared [Châtelain, Jacques-Jean]", "normalized label (2)");
-	is($description, "I Cared", "description (2)");
+	is($description, "I Cared [45432]", "description (2)");
 	is($url, "http://www.hls-dhs-dss.ch/textes/d/D45432.php", "url (2)");
 
 	is($response->toJSON(), 
-	   '["103117741",["I Cared [Châtelain, Jean-Jacques]","I Cared [Test encoding only]","I Cared [Châtelain, Jacques-Jean]"],["I Cared","I Cared","I Cared"],["http://www.hls-dhs-dss.ch/textes/d/D45433.php","http://www.hls-dhs-dss.ch/textes/d/DT%C3%A2t%C3%A2.php","http://www.hls-dhs-dss.ch/textes/d/D45432.php"]]',
+	   '["103117741",["I Cared [Châtelain, Jean-Jacques]","I Cared [Test encoding only]","I Cared [Châtelain, Jacques-Jean]"],["I Cared [45433]","I Cared [Tâtâ]","I Cared [45432]"],["http://www.hls-dhs-dss.ch/textes/d/D45433.php","http://www.hls-dhs-dss.ch/textes/d/DT%C3%A2t%C3%A2.php","http://www.hls-dhs-dss.ch/textes/d/D45432.php"]]',
 	   "JSON string");
   };
 

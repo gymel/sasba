@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_88';
+    $VERSION     = '0.2_89';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -524,17 +524,19 @@ XxX
 
       $label = sprintf($label, $hits);
       $onerow->[4] = "" unless defined $onerow->[4];
-      $label .= " [".$onerow->[4]."]" if ($onerow->[4] =~ /[a-wyz]/) or ($onerow->[4] && ($onerow->[4] !~ /\d/));   # add info
 
 #     my $description = $hits;     # entsprechend opensearchsuggestions: pleonastisch, langweilig
 #     my $description = $onerow->[12] || $onerow->[13] || $onerow->[8] || $onerow->[10] || $onerow->[5]; # NAME or INSTITUTION or SOMEMESSAGE or MESSAGE
 # DESCRIPTION || INSTITUTION || NAME || SOMEMESSAGE || MESSAGE  || alias
       my $description = $onerow->[11] || $onerow->[13] || $onerow->[12] || $onerow->[10] || $onerow->[8] || $onerow->[15] || ""; # INSTITUTION or NAME or SOMEMESSAGE or MESSAGE
-      if ( ($onerow->[4] =~ /\d/) and ($onerow->[4] !~ /[a-wyz]/) ) {
+
+# Anreicherungen
+      if ( ($onerow->[4] =~ /\d{2}/) and ($onerow->[4] !~ /[a-wyz]/) ) {
           $description .= " [".$onerow->[4]."]"}   # add info
       else {
 #         $onerow->[1] = "" unless defined $onerow->[1];
-#         $description .= " [".$onerow->[1]."]" if $onerow->[1];  # Add target identifier
+          $label .= " [".$onerow->[4]."]" if $onerow->[4];   # add info
+          $description .= " [".$onerow->[1]."]" if $onerow->[1];  # Add target identifier
         };
 
       $response->add($label, $description, $uri) unless $didalready{join("\x7f", $label, $description, $uri)}++;
