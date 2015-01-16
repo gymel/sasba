@@ -1211,7 +1211,7 @@ XxX
       return $collno ? ($collno, $count) : undef;
     }
   elsif ( $response->code == 304 ) {
-      print "INFO: $alias not modified since ".HTTP::Date::time2str($modtime)."\n";
+      print "INFO: $alias not modified since ".HTTP::Date::time2str($modtime)."\n" if $options{'verbose'};
       my $vt = $response->fresh_until(h_min => 1800, h_max => 6 * 86400);
       printf("  %-30s %s\n", "Will not try again before", scalar localtime($vt)) if $options{'verbose'};
       my ($usth, $usthexpl) = $self->stmtHdl(<<"XxX");

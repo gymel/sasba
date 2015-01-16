@@ -1028,7 +1028,7 @@ sub refreshOSD {    #
     my $rcount = scalar keys %descr;
     print "set Descriptions... " if $verbose;
     $db->setOSD("Description", "Currently serving $gcountu distinct identifiers from $rcount beacon sources:\n -- "
-                               .join(".\n -- ", map { $descr{$_} } sort { $sortref->{$a} cmp $sortref->{$b} } keys %descr)
+                               .join(".\n -- ", map { $descr{$_} } sort { ($countref->{$b}||-1 <=> $countref->{$a}||-1) || ($sortref->{$a} cmp $sortref->{$b}) } keys %descr)
                );
 
     my $srcref = $db->RepoCols("FEED");
