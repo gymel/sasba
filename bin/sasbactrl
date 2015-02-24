@@ -565,8 +565,11 @@ elsif ( $action eq "update" ) {
 
         foreach ( sort {$a <=> $b} keys %$aliasref ) {
             my $linestart = "";
+            my $visible;
             if ( $verbose ) {
-                print "\n==> $aliasref->{$_} <==\n"}
+                print "\n==> $aliasref->{$_} <==\n";
+                $visible = 1;
+              }
             else {
                 $linestart =sprintf("%-10s - ", $aliasref->{$_})};
             unless ( $uriref->{$_} ) {
@@ -592,7 +595,10 @@ elsif ( $action eq "update" ) {
 
             my $forcereload;
             unless ( $force ) {
-                print @states if $verbose;
+                if ( $verbose ) {
+                    print @states;
+                    $visible = 1;
+                  };
 
                 my ($xtime, $statref);
                 ($forcereload, $xtime, $statref) = policy(\%stamps);
@@ -606,27 +612,38 @@ elsif ( $action eq "update" ) {
                         $message =~ s/ policy//;
                         ($status, $info) = ($code, $message);
                         if ( $verbose ) {
-                            printf "[%4s] %-20s %30s -> skipped\n", $status, $info, lct($stamp)}
+                            printf "[%4s] %-20s %30s -> skipped\n", $status, $info, lct($stamp);
+                            $visible = 1;
+                          }
                       };
 
                     if ( $xtime > $^T ) {
-                        unless ( $verbose ) {
-                            printf ("%s[%4s] next %30s (age: %s, %s)\n", $linestart, $status, lct($xtime), $age, $info) unless $quiet && $quiet > 1};
+                        unless ( $verbose or ($quiet && $quiet > 1) ) {
+                            printf ("%s[%4s] next %30s (age: %s, %s)\n", $linestart, $status, lct($xtime), $age, $info);
+                            $visible = 1;
+                          };
                         next;
                       };
                   }
               };
 
             if ( !$verbose ) {
-                printf("%s[%4s] curr %30s (age: %s, %s)\n", $linestart, "LOAD", lct(($stamps{"stime"} && ($stamps{"stime"} < $stamps{"mtime"})) ? $stamps{"stime"} : $stamps{"mtime"}), $age, "will reload")}
+                unless ( $quiet && $quiet > 1 ) {
+                    printf("%s[%4s] curr %30s (age: %s, %s)\n", $linestart, "LOAD", lct(($stamps{"stime"} && ($stamps{"stime"} < $stamps{"mtime"})) ? $stamps{"stime"} : $stamps{"mtime"}), $age, "will reload");
+                    $visible = 1;
+                  }
+              }
             elsif ( $force ) {
-                print @states};
+                print @states;
+                $visible = 1;
+              };
             my ($cn, $cc) = $db->update($aliasref->{$_}, {}, %passopts, ($forcereload ? ( 'force' => 1) : ()), 'nostat' => 1);
             if ( $cn ) {
                 printf "%2u: %s successfully updated (new SeqNo %u, %u records)\n", ++$did, $aliasref->{$_}, $cn, $cc;
+                $visible = 1;
 #               refreshOSD(0) unless $keeposd;     # will be done anyway since $did true now
               };
-            print " ***\n";
+            print " ***\n" unless $visible;
           };
       };
     if ( $did or $force ) {
