@@ -3,53 +3,53 @@ abstract: 'Beacon files as source for SeeAlso::Server'
 author:
   - 'Thomas Berger <ThB@gymel.com>'
 build_requires:
-  SeeAlso::Identifier::GND: 0.54
-  Test::Command::Simple: 0
-  Test::More: 0.94
-  URI::file: 1.0
+  SeeAlso::Identifier::GND: '0.54'
+  Test::Command::Simple: '0'
+  Test::More: '0.94'
+  URI::file: '1.0'
 configure_requires:
-  Module::Build: 0.35
+  Module::Build: '0.35'
 dynamic_config: 1
-generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.110440'
+generated_by: 'Module::Build version 0.4211, CPAN::Meta::Converter version 2.150001'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
+  version: '1.4'
 name: SeeAlso-Source-BeaconAggregator
 provides:
   SeeAlso::Source::BeaconAggregator:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
-    version: 0.2_89
+    version: 0.2_90
   SeeAlso::Source::BeaconAggregator::Maintenance:
     file: lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm
-    version: 0.2_89
+    version: 0.2_90
   SeeAlso::Source::BeaconAggregator::Publisher:
     file: lib/SeeAlso/Source/BeaconAggregator/Publisher.pm
-    version: 0.2_89
+    version: 0.2_90
 recommends:
-  Getopt::Long: 0
-  LWP: 5.827
-  Pod::Usage: 0
-  SeeAlso::Identifier::GND: 0.55
-  SeeAlso::Identifier::PND: 0.57
-  SeeAlso::Server: 0.58
+  Getopt::Long: '0'
+  LWP: '5.827'
+  Pod::Usage: '0'
+  SeeAlso::Identifier::GND: '0.55'
+  SeeAlso::Identifier::PND: '0.57'
+  SeeAlso::Server: '0.58'
 requires:
-  CGI: 3.0
-  Carp: 0
-  DBD::SQLite: 1.25
-  DBI: 1.57
-  File::Temp: 0
-  HTTP::Date: 1.46
-  HTTP::Request: 1.40
-  LWP: 5.802
-  LWP::UserAgent: 2.031
-  SeeAlso::Identifier: 0.46
-  SeeAlso::Response: 0.54
-  SeeAlso::Server: 0.57
-  SeeAlso::Source: 0.56
+  CGI: '3.0'
+  Carp: '0'
+  DBD::SQLite: '1.25'
+  DBI: '1.57'
+  File::Temp: '0'
+  HTTP::Date: '1.46'
+  HTTP::Request: '1.40'
+  LWP: '5.802'
+  LWP::UserAgent: '2.031'
+  SeeAlso::Identifier: '0.46'
+  SeeAlso::Response: '0.54'
+  SeeAlso::Server: '0.57'
+  SeeAlso::Source: '0.56'
   perl: v5.8.2
 resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=SeeAlso-Source-BeaconAggregator
   license: http://dev.perl.org/licenses/
   repository: https://github.com/gymel/sasba.git
-version: 0.2_89
+version: 0.2_90

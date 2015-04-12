@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_89';
+    $VERSION     = '0.2_90';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -374,8 +374,9 @@ Maintenance action: performs VACCUUM, REINDEX and ANALYZE on the database
 sub deflate {
   my ($self) = @_;
   my $hdl = $self->{dbh} or croak("no handle?");
+  local $hdl->{AutoCommit} = 1;
   print "VACUUM\n";
-  $hdl->do("VACUUM") or croak("could not VACUUM: Abort");
+  $hdl->do("VACUUM") or carp("could not VACUUM: Skipping...");
   print "REINDEX\n";
   $hdl->do("REINDEX") or croak("could not REINDEX: Abort");
   print "ANALYZE\n";

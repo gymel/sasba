@@ -4,7 +4,7 @@
       "Thomas Berger <ThB@gymel.com>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.110440",
+   "generated_by" : "Module::Build version 0.4211",
    "license" : [
       "perl_5"
    ],
@@ -17,7 +17,7 @@
       "build" : {
          "requires" : {
             "SeeAlso::Identifier::GND" : "0.54",
-            "Test::Command::Simple" : 0,
+            "Test::Command::Simple" : "0",
             "Test::More" : "0.94",
             "URI::file" : "1.0"
          }
@@ -29,19 +29,19 @@
       },
       "runtime" : {
          "recommends" : {
-            "Getopt::Long" : 0,
+            "Getopt::Long" : "0",
             "LWP" : "5.827",
-            "Pod::Usage" : 0,
+            "Pod::Usage" : "0",
             "SeeAlso::Identifier::GND" : "0.55",
             "SeeAlso::Identifier::PND" : "0.57",
             "SeeAlso::Server" : "0.58"
          },
          "requires" : {
             "CGI" : "3.0",
-            "Carp" : 0,
+            "Carp" : "0",
             "DBD::SQLite" : "1.25",
             "DBI" : "1.57",
-            "File::Temp" : 0,
+            "File::Temp" : "0",
             "HTTP::Date" : "1.46",
             "HTTP::Request" : "1.40",
             "LWP" : "5.802",
@@ -57,15 +57,15 @@
    "provides" : {
       "SeeAlso::Source::BeaconAggregator" : {
          "file" : "lib/SeeAlso/Source/BeaconAggregator.pm",
-         "version" : "0.2_89"
+         "version" : "0.2_90"
       },
       "SeeAlso::Source::BeaconAggregator::Maintenance" : {
          "file" : "lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm",
-         "version" : "0.2_89"
+         "version" : "0.2_90"
       },
       "SeeAlso::Source::BeaconAggregator::Publisher" : {
          "file" : "lib/SeeAlso/Source/BeaconAggregator/Publisher.pm",
-         "version" : "0.2_89"
+         "version" : "0.2_90"
       }
    },
    "release_status" : "testing",
@@ -80,5 +80,5 @@
          "url" : "https://github.com/gymel/sasba.git"
       }
    },
-   "version" : "0.2_89"
+   "version" : "0.2_90"
 }
