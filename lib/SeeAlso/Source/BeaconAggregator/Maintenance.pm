@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_90';
+    $VERSION     = '0.2_91';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -584,7 +584,16 @@ sub loadFile {
          unless ( $link ) {
              if ( ($format =~ /\bhasTARGET\b/) ) {   # ok
                }
-             elsif ( $altid && ($format =~ /\baltTARGET\b/) ) {   # also ok
+             elsif ( $format =~ /\baltTARGET\b/ ) {
+                 if ( $altid ) {                     # also ok
+                   }
+                 elsif ( $info ) {                   # too strange
+                     print "WARNING: discarding >$id<".(defined $hits ? " ($hits)" : "")." for $info without link [$showme l.$.] (assertion failed)\n";
+                     $recill++;
+                     next lines;
+                   }
+                 else {                              # feed id as altid
+                     $altid = $id}
                }
              elsif ( $format =~ /\bnoTARGET\b/ ) {
                  print "NOTICE: discarding >$id<".(defined $hits ? " ($hits)" : "")." without link [$showme l.$.]\n" if $options{'verbose'} > 1;

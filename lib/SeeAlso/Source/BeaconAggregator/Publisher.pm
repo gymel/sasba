@@ -2,7 +2,7 @@ package SeeAlso::Source::BeaconAggregator::Publisher;
 use strict;
 use warnings;
 
-our $VERSION = "0.2_90";
+our $VERSION = "0.2_91";
 
 =head1 NAME
 
