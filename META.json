@@ -4,7 +4,7 @@
       "Thomas Berger <ThB@gymel.com>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.4211",
+   "generated_by" : "Module::Build version 0.4218",
    "license" : [
       "perl_5"
    ],
@@ -57,15 +57,15 @@
    "provides" : {
       "SeeAlso::Source::BeaconAggregator" : {
          "file" : "lib/SeeAlso/Source/BeaconAggregator.pm",
-         "version" : "0.2_91"
+         "version" : "0.2_92"
       },
       "SeeAlso::Source::BeaconAggregator::Maintenance" : {
          "file" : "lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm",
-         "version" : "0.2_91"
+         "version" : "0.2_92"
       },
       "SeeAlso::Source::BeaconAggregator::Publisher" : {
          "file" : "lib/SeeAlso/Source/BeaconAggregator/Publisher.pm",
-         "version" : "0.2_91"
+         "version" : "0.2_92"
       }
    },
    "release_status" : "testing",
@@ -80,5 +80,6 @@
          "url" : "https://github.com/gymel/sasba.git"
       }
    },
-   "version" : "0.2_91"
+   "version" : "0.2_92",
+   "x_serialization_backend" : "JSON::PP version 2.27400"
 }

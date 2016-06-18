@@ -10,7 +10,7 @@ build_requires:
 configure_requires:
   Module::Build: '0.35'
 dynamic_config: 1
-generated_by: 'Module::Build version 0.4211, CPAN::Meta::Converter version 2.150001'
+generated_by: 'Module::Build version 0.4218, CPAN::Meta::Converter version 2.150005'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -19,13 +19,13 @@ name: SeeAlso-Source-BeaconAggregator
 provides:
   SeeAlso::Source::BeaconAggregator:
     file: lib/SeeAlso/Source/BeaconAggregator.pm
-    version: 0.2_91
+    version: 0.2_92
   SeeAlso::Source::BeaconAggregator::Maintenance:
     file: lib/SeeAlso/Source/BeaconAggregator/Maintenance.pm
-    version: 0.2_91
+    version: 0.2_92
   SeeAlso::Source::BeaconAggregator::Publisher:
     file: lib/SeeAlso/Source/BeaconAggregator/Publisher.pm
-    version: 0.2_91
+    version: 0.2_92
 recommends:
   Getopt::Long: '0'
   LWP: '5.827'
@@ -52,4 +52,5 @@ resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=SeeAlso-Source-BeaconAggregator
   license: http://dev.perl.org/licenses/
   repository: https://github.com/gymel/sasba.git
-version: 0.2_91
+version: 0.2_92
+x_serialization_backend: 'CPAN::Meta::YAML version 0.018'

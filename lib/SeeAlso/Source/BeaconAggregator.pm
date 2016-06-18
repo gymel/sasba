@@ -5,7 +5,7 @@ use warnings;
 BEGIN {
     use Exporter ();
     use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS);
-    $VERSION     = '0.2_91';
+    $VERSION     = '0.2_92';
     @ISA         = qw(Exporter);
     #Give a hoot don't pollute, do not export more than needed by default
     @EXPORT      = qw();
@@ -522,7 +522,10 @@ XxX
       elsif ( $hits ) {
           ($label .= " (%s)") unless ($label =~ /(^|[^%])%s/)};
 
-      $label = sprintf($label, $hits);
+      {
+        no warnings 'redundant';
+        $label = sprintf($label, $hits);
+      }
       $onerow->[4] = "" unless defined $onerow->[4];
 
 #     my $description = $hits;     # entsprechend opensearchsuggestions: pleonastisch, langweilig

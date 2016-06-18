@@ -20,7 +20,7 @@ SKIP: {
     eval {
 	require Test::Command::Simple;
       };
-    skip "Test::Command::Simple not installed", 16 if $@;
+    skip "Test::Command::Simple not installed", 24 if $@;
 
     run_ok(2, $cmd, "");
     is(rc >> 8, 2, "Testing exit_status of empty call: ".(scalar stderr));
@@ -91,7 +91,7 @@ subtest "cache_size" => sub {
     is(rc >> 8, 0, "ask for pragma 'cache_size': ".stderr);
     is(stderr, "", "warnings on query for 'cache_size': ".stderr);
     ($line) = split(/\r?\n/, stdout, 2);
-    like($line, qr/^\d*$/, "query cache_size: ($line)");
+    like($line, qr/^-?\d+$/, "query cache_size: ($line)");
     my $cvalue = int($line / 3);
 
     run_ok($cmd, "--dbroot", ".", "--dsn", $dsn, "--cache_size", "4000", "--pragma", 'cache_size', "noop");
